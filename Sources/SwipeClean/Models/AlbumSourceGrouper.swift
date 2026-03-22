@@ -24,20 +24,3 @@ enum AlbumSourceGrouper {
     }
 }
 
-// MARK: - Hashable Conformance for AlbumSource
-
-extension AlbumSource: Hashable {
-    func hash(into hasher: inout Hasher) {
-        switch self {
-        case .allPhotos: hasher.combine("allPhotos")
-        case .recents: hasher.combine("recents")
-        case .screenshots: hasher.combine("screenshots")
-        case .videos: hasher.combine("videos")
-        case .selfies: hasher.combine("selfies")
-        case .livePhotos: hasher.combine("livePhotos")
-        case .favorites: hasher.combine("favorites")
-        case .album(let collection): hasher.combine(collection.localIdentifier)
-        case .duplicates: hasher.combine("duplicates")
-        }
-    }
-}

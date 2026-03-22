@@ -65,7 +65,7 @@ final class HomeViewModelTests: XCTestCase {
     // MARK: - Stats Card Tests
 
     func test_statsCard_showsCorrectLifetimeData() {
-        let tracker = SessionTracker(userDefaults: MockUserDefaults())
+        let tracker = SessionTracker(userDefaults: HomeTestMockUserDefaults())
 
         // Fresh tracker should have zero stats
         let stats = tracker.lifetimeStats
@@ -219,7 +219,7 @@ final class HomeViewModelTests: XCTestCase {
 
 // MARK: - Mock UserDefaults for SessionTracker
 
-private final class MockUserDefaults: UserDefaultsStoring {
+private final class HomeTestMockUserDefaults: UserDefaultsStoring {
     private var storage: [String: Any] = [:]
 
     func integer(forKey key: String) -> Int {

@@ -1,7 +1,7 @@
 import Photos
 
 /// Represents a photo source the user can swipe through.
-enum AlbumSource: Equatable {
+enum AlbumSource: Hashable {
     case allPhotos
     case recents
     case screenshots
@@ -59,12 +59,36 @@ enum AlbumSource: Equatable {
             return false
         }
     }
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .allPhotos: hasher.combine("allPhotos")
+        case .recents: hasher.combine("recents")
+        case .screenshots: hasher.combine("screenshots")
+        case .videos: hasher.combine("videos")
+        case .selfies: hasher.combine("selfies")
+        case .livePhotos: hasher.combine("livePhotos")
+        case .favorites: hasher.combine("favorites")
+        case .album(let collection): hasher.combine(collection.localIdentifier)
+        case .duplicates: hasher.combine("duplicates")
+        }
+    }
 }
 
 /// Contains a source and its photo count, used by AlbumProvider.
-struct AlbumSourceInfo: Hashable {
+struct AlbumSourceInfo: Identifiable, Hashable {
     let source: AlbumSource
     let count: Int
+
+    var id: AlbumSource { source }
+
+    static func == (lhs: AlbumSourceInfo, rhs: AlbumSourceInfo) -> Bool {
+        lhs.source == rhs.source && lhs.count == rhs.count
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(source)
+    }
 }
 
 /// Sort order for fetch results.

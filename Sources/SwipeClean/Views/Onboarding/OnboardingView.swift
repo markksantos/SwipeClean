@@ -78,7 +78,7 @@ struct OnboardingView: View {
             // Icon
             Image(systemName: page.iconName)
                 .font(.system(size: 80))
-                .foregroundStyle(.accent)
+                .foregroundStyle(.blue)
                 .frame(height: 120)
 
             // Title

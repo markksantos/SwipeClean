@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 struct AlbumCard: View {
     let source: AlbumSource

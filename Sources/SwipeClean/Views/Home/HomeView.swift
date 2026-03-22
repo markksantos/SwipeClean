@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 struct HomeView: View {
     @EnvironmentObject private var albumProvider: AlbumProvider
@@ -6,7 +7,7 @@ struct HomeView: View {
     @EnvironmentObject private var deleteManager: DeleteManager
 
     @State private var showSettings = false
-    @State private var selectedSource: AlbumSourceInfo?
+    @State private var navigationPath = NavigationPath()
 
     private var grouped: (smart: [AlbumSourceInfo], user: [AlbumSourceInfo]) {
         var smart: [AlbumSourceInfo] = []
@@ -23,7 +24,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     // Hero stats card
@@ -69,7 +70,7 @@ struct HomeView: View {
                                     source: info.source,
                                     photoCount: info.count
                                 ) {
-                                    selectedSource = info
+                                    navigationPath.append(info)
                                 }
                             }
                         }
@@ -84,7 +85,7 @@ struct HomeView: View {
                                     source: info.source,
                                     photoCount: info.count
                                 ) {
-                                    selectedSource = info
+                                    navigationPath.append(info)
                                 }
                             }
                         }
@@ -112,13 +113,14 @@ struct HomeView: View {
                     .environmentObject(sessionTracker)
                     .environmentObject(deleteManager)
             }
-            .navigationDestination(item: $selectedSource) { info in
-                // SwipeView provided by the Swipe teammate.
-                // It expects PhotoLoader, DeleteManager, SessionTracker as EnvironmentObjects.
-                // The parent (SwipeCleanApp) should inject PhotoLoader when navigating.
-                SwipeViewPlaceholder(source: info.source)
+            .navigationDestination(for: AlbumSourceInfo.self) { info in
+                SwipeView(albumName: info.source.displayName)
+                    .environmentObject(PhotoLoader())
                     .environmentObject(deleteManager)
                     .environmentObject(sessionTracker)
+                    .onAppear {
+                        // Load photos for the selected source
+                    }
             }
         }
         .onAppear {
@@ -134,30 +136,6 @@ struct HomeView: View {
     }
 }
 
-// MARK: - AlbumSourceInfo + Identifiable & Hashable for NavigationDestination
-
-extension AlbumSourceInfo: Identifiable, Hashable {
-    var id: AlbumSource { source }
-
-    static func == (lhs: AlbumSourceInfo, rhs: AlbumSourceInfo) -> Bool {
-        lhs.source == rhs.source && lhs.count == rhs.count
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(source)
-    }
-}
-
-// MARK: - Placeholder for SwipeView (will be replaced when integration is ready)
-
-struct SwipeViewPlaceholder: View {
-    let source: AlbumSource
-
-    var body: some View {
-        Text("SwipeView for \(source.displayName)")
-            .navigationTitle(source.displayName)
-    }
-}
 
 #Preview {
     HomeView()

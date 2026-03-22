@@ -57,7 +57,7 @@ final class MockPhotoLibrary: PhotoLibraryPerforming {
 final class MockAssetFetcher: AssetFetching {
     var stubbedAssets: [PHAsset] = []
 
-    func fetchAssets(for source: AlbumSource, sortOrder: SortOrder) -> [PHAsset] {
+    func fetchAssets(for source: AlbumSource, sortOrder: SwipeClean.SortOrder) -> [PHAsset] {
         return stubbedAssets
     }
 

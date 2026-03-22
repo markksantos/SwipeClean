@@ -19,7 +19,7 @@ struct PhotoDetailOverlay: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-                .opacity(max(0, 1 - abs(dismissOffset) / 300))
+                .opacity(max(0, 1.0 - abs(dismissOffset) / 300.0))
 
             // Swipe-to-dismiss wrapper
             VStack {
@@ -87,9 +87,9 @@ struct PhotoDetailOverlay: View {
     // MARK: - Gestures
 
     private var zoomGesture: some Gesture {
-        MagnifyGesture()
+        MagnificationGesture()
             .onChanged { value in
-                let newScale = lastScale * value.magnification
+                let newScale = lastScale * value
                 scale = min(max(newScale, 1.0), 5.0)
             }
             .onEnded { _ in
@@ -142,7 +142,7 @@ struct PhotoDetailOverlay: View {
 
 /// Wraps AVPlayerViewController for video playback.
 struct VideoPlayerSheet: View {
-    let asset: PHAsset
+    let asset: PHAsset?
 
     @State private var player: AVPlayer?
 
@@ -165,6 +165,7 @@ struct VideoPlayerSheet: View {
     }
 
     private func loadVideo() async {
+        guard let asset else { return }
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
         options.deliveryMode = .highQualityFormat

@@ -63,7 +63,7 @@ struct SessionCompleteView: View {
                 }
             }
             .sheet(isPresented: $showReviewGrid) {
-                ReviewGridView(photos: deleteManager.trashQueue)
+                DeletionPreviewGrid(photos: deleteManager.trashQueue)
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
@@ -236,10 +236,10 @@ struct ConfettiParticle: Identifiable {
     let size: CGFloat
 }
 
-// MARK: - Review Grid View
+// MARK: - Deletion Preview Grid
 
-/// Grid of photos queued for deletion, allowing review before final delete.
-struct ReviewGridView: View {
+/// Simple grid of photos queued for deletion, for quick review before final delete.
+struct DeletionPreviewGrid: View {
     let photos: [PhotoItem]
 
     @Environment(\.dismiss) private var dismiss

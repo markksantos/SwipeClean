@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 struct ReviewGridView: View {
     @EnvironmentObject private var deleteManager: DeleteManager
