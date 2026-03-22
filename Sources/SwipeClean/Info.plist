@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SwipeClean needs access to your photo library so you can swipe through photos to keep or delete them.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SwipeClean needs access to save photos to your library.</string>
+</dict>
+</plist>

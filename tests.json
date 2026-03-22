@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {"id": 1, "name": "photo_loader_preloads_next_3", "owner": "core", "status": "not_started"},
+    {"id": 2, "name": "photo_loader_sliding_window_20", "owner": "core", "status": "not_started"},
+    {"id": 3, "name": "photo_loader_cancels_outdated_requests", "owner": "core", "status": "not_started"},
+    {"id": 4, "name": "delete_manager_queues_not_deletes", "owner": "core", "status": "not_started"},
+    {"id": 5, "name": "delete_manager_batch_deletion", "owner": "core", "status": "not_started"},
+    {"id": 6, "name": "delete_manager_undo_last_swipe", "owner": "core", "status": "not_started"},
+    {"id": 7, "name": "session_tracker_storage_freed_calculation", "owner": "core", "status": "not_started"},
+    {"id": 8, "name": "session_tracker_lifetime_persistence", "owner": "core", "status": "not_started"},
+    {"id": 9, "name": "album_provider_all_smart_albums", "owner": "core", "status": "not_started"},
+    {"id": 10, "name": "album_provider_filters_empty", "owner": "core", "status": "not_started"},
+    {"id": 11, "name": "permission_manager_all_states", "owner": "core", "status": "not_started"},
+    {"id": 12, "name": "swipe_right_past_threshold_keeps", "owner": "swipe", "status": "not_started"},
+    {"id": 13, "name": "swipe_left_past_threshold_deletes", "owner": "swipe", "status": "not_started"},
+    {"id": 14, "name": "swipe_within_threshold_springs_back", "owner": "swipe", "status": "not_started"},
+    {"id": 15, "name": "velocity_flick_triggers_action", "owner": "swipe", "status": "not_started"},
+    {"id": 16, "name": "card_rotation_follows_offset", "owner": "swipe", "status": "not_started"},
+    {"id": 17, "name": "overlay_opacity_matches_distance", "owner": "swipe", "status": "not_started"},
+    {"id": 18, "name": "card_stack_promotes_next_card", "owner": "swipe", "status": "not_started"},
+    {"id": 19, "name": "haptic_feedback_on_threshold_cross", "owner": "swipe", "status": "not_started"},
+    {"id": 20, "name": "session_complete_shows_stats", "owner": "swipe", "status": "not_started"},
+    {"id": 21, "name": "review_grid_shows_queued_deletions", "owner": "swipe", "status": "not_started"},
+    {"id": 22, "name": "home_sources_display_counts", "owner": "home", "status": "not_started"},
+    {"id": 23, "name": "home_empty_albums_dimmed", "owner": "home", "status": "not_started"},
+    {"id": 24, "name": "onboarding_shows_once", "owner": "home", "status": "not_started"},
+    {"id": 25, "name": "settings_sort_order_persists", "owner": "home", "status": "not_started"},
+    {"id": 26, "name": "project_builds_clean", "owner": "lead", "status": "not_started"}
+  ]
+}

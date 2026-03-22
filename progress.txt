@@ -1,0 +1,5 @@
+Session 1 — Initial setup
+- Status: in_progress
+- Scaffolded directory structure
+- Created SwipeCleanApp.swift, tests.json, progress.txt
+- Next: Create Xcode project, spawn 3 teammate agents
