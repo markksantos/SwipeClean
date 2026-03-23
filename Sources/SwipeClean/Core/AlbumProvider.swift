@@ -147,6 +147,7 @@ final class LiveAssetFetcher: AssetFetching {
 final class AlbumProvider: ObservableObject {
 
     @Published private(set) var sources: [AlbumSourceInfo] = []
+    @Published private(set) var isLoading: Bool = false
 
     private let assetFetcher: AssetFetching
 
@@ -154,11 +155,24 @@ final class AlbumProvider: ObservableObject {
         self.assetFetcher = assetFetcher
     }
 
-    /// Fetches all available sources, filtering out empty ones.
+    /// Fetches all available sources synchronously on the calling thread.
     /// Smart albums appear first, then user albums alphabetically.
     func fetchAvailableSources() -> [AlbumSourceInfo] {
         let fetched = assetFetcher.fetchAlbumSources()
         sources = fetched
         return fetched
+    }
+
+    /// Fetches available sources on a background queue and publishes results on main.
+    /// Sets `isLoading` while the fetch is in progress.
+    func fetchAvailableSourcesAsync() {
+        isLoading = true
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let fetched = self?.assetFetcher.fetchAlbumSources() ?? []
+            DispatchQueue.main.async {
+                self?.sources = fetched
+                self?.isLoading = false
+            }
+        }
     }
 }

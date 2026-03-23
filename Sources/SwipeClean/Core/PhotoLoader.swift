@@ -63,10 +63,15 @@ final class PhotoLoader: ObservableObject {
     }
 
     /// Fetches photos from the given album source and loads them.
+    /// Heavy fetch work runs on a background queue to avoid blocking the UI.
     func loadSource(_ source: AlbumSource, sortOrder: SortOrder = .newestFirst) {
-        let assets = assetFetcher.fetchAssets(for: source, sortOrder: sortOrder)
-        let items = assets.map { PhotoItem(asset: $0) }
-        loadItems(items)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let assets = self?.assetFetcher.fetchAssets(for: source, sortOrder: sortOrder) ?? []
+            let items = assets.map { PhotoItem(asset: $0) }
+            DispatchQueue.main.async {
+                self?.loadItems(items)
+            }
+        }
     }
 
     /// Advances to the next photo. Called after a swipe.
@@ -141,9 +146,39 @@ final class PhotoLoader: ObservableObject {
     private func loadFullImage(for item: PhotoItem) {
         guard let asset = item.asset else { return }
 
+        // Fast path: if PHImageManager already has the image cached, load synchronously
+        // to avoid a flash of loading state.
+        let syncOptions = PHImageRequestOptions()
+        syncOptions.isSynchronous = true
+        syncOptions.deliveryMode = .fastFormat
+        syncOptions.isNetworkAccessAllowed = false
+        syncOptions.resizeMode = .fast
+
+        var foundCached = false
+        imageLoader.requestImage(
+            for: asset,
+            targetSize: fullImageSize,
+            contentMode: .aspectFit,
+            options: syncOptions
+        ) { [weak item] image, info in
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            if let image = image, !isDegraded {
+                item?.fullImage = image
+                item?.thumbnail = item?.thumbnail ?? image
+                foundCached = true
+            }
+        }
+
+        if foundCached {
+            objectWillChange.send()
+            return
+        }
+
+        // Async path for non-cached images
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
         options.resizeMode = .fast
 
         let requestID = imageLoader.requestImage(
@@ -151,12 +186,15 @@ final class PhotoLoader: ObservableObject {
             targetSize: fullImageSize,
             contentMode: .aspectFit,
             options: options
-        ) { [weak item] image, info in
-            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-            if let image = image {
-                item?.fullImage = image
-                if !isDegraded {
-                    item?.thumbnail = item?.thumbnail ?? image
+        ) { [weak self, weak item] image, info in
+            DispatchQueue.main.async {
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if let image = image {
+                    item?.fullImage = image
+                    if !isDegraded {
+                        item?.thumbnail = item?.thumbnail ?? image
+                    }
+                    self?.objectWillChange.send()
                 }
             }
         }
@@ -169,6 +207,7 @@ final class PhotoLoader: ObservableObject {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
         options.resizeMode = .fast
 
         let requestID = imageLoader.requestImage(
@@ -176,9 +215,12 @@ final class PhotoLoader: ObservableObject {
             targetSize: Self.thumbnailSize,
             contentMode: .aspectFill,
             options: options
-        ) { [weak item] image, _ in
-            if let image = image {
-                item?.thumbnail = image
+        ) { [weak self, weak item] image, _ in
+            DispatchQueue.main.async {
+                if let image = image {
+                    item?.thumbnail = image
+                    self?.objectWillChange.send()
+                }
             }
         }
         activeRequestIDs[item.id] = requestID

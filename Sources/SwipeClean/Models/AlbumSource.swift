@@ -27,6 +27,22 @@ enum AlbumSource: Hashable {
         }
     }
 
+    /// Sort priority for display order on the home screen.
+    /// Lower values appear first.
+    var sortPriority: Int {
+        switch self {
+        case .allPhotos: return 0
+        case .recents: return 1
+        case .screenshots: return 2
+        case .videos: return 3
+        case .selfies: return 4
+        case .livePhotos: return 5
+        case .favorites: return 6
+        case .duplicates: return 7
+        case .album: return 8
+        }
+    }
+
     /// SF Symbol icon name for this source.
     var iconName: String {
         switch self {

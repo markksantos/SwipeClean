@@ -1,4 +1,5 @@
 import Photos
+import UIKit
 import Combine
 
 /// Production implementation of PermissionProviding that wraps PHPhotoLibrary.
@@ -75,6 +76,12 @@ final class PermissionManager: NSObject, ObservableObject, PHPhotoLibraryChangeO
     /// Whether access is limited (user selected specific photos only).
     var isLimited: Bool {
         authorizationState == .limited
+    }
+
+    /// Opens the app's page in iOS Settings so the user can adjust permissions.
+    func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     // MARK: - PHPhotoLibraryChangeObserver
