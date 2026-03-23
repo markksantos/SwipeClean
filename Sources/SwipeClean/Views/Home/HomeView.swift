@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
     @State private var cardsVisible = false
     @State private var animateGradient = false
+    @State private var supercutTarget: SupercutNavItem?
 
     private var grouped: (smart: [AlbumSourceInfo], months: [AlbumSourceInfo], user: [AlbumSourceInfo]) {
         var smart: [AlbumSourceInfo] = []
@@ -105,6 +106,13 @@ struct HomeView: View {
                                 ) {
                                     navigationPath.append(info)
                                 }
+                                .contextMenu {
+                                    Button {
+                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
+                                    } label: {
+                                        Label("Create Supercut", systemImage: "film")
+                                    }
+                                }
                                 .opacity(cardsVisible ? 1 : 0)
                                 .offset(y: cardsVisible ? 0 : 20)
                                 .animation(
@@ -126,6 +134,13 @@ struct HomeView: View {
                                 ) {
                                     navigationPath.append(info)
                                 }
+                                .contextMenu {
+                                    Button {
+                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
+                                    } label: {
+                                        Label("Create Supercut", systemImage: "film")
+                                    }
+                                }
                                 .opacity(cardsVisible ? 1 : 0)
                                 .offset(y: cardsVisible ? 0 : 20)
                                 .animation(
@@ -146,6 +161,13 @@ struct HomeView: View {
                                     photoCount: info.count
                                 ) {
                                     navigationPath.append(info)
+                                }
+                                .contextMenu {
+                                    Button {
+                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
+                                    } label: {
+                                        Label("Create Supercut", systemImage: "film")
+                                    }
                                 }
                                 .opacity(cardsVisible ? 1 : 0)
                                 .offset(y: cardsVisible ? 0 : 20)
@@ -183,6 +205,15 @@ struct HomeView: View {
                 SwipeView(albumName: info.source.displayName, albumSource: info.source)
                     .environmentObject(deleteManager)
                     .environmentObject(sessionTracker)
+            }
+            .navigationDestination(for: SupercutNavItem.self) { item in
+                SupercutSettingsView(albumSource: item.albumSource, photoCount: item.photoCount)
+            }
+            .onChange(of: supercutTarget) { newValue in
+                if let target = newValue {
+                    navigationPath.append(target)
+                    supercutTarget = nil
+                }
             }
         }
         .onAppear {

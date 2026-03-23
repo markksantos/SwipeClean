@@ -12,6 +12,16 @@ struct AlbumCard: View {
         photoCount == 0
     }
 
+    /// Whether this card's source type supports supercut creation and should show a film badge.
+    private var showsFilmBadge: Bool {
+        switch source {
+        case .month, .onThisDay, .recents:
+            return !isEmpty
+        default:
+            return false
+        }
+    }
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
@@ -22,6 +32,16 @@ struct AlbumCard: View {
                     .frame(width: 40, height: 40)
                     .background(isEmpty ? Color.secondary.opacity(0.08) : Color.accentColor.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(alignment: .bottomTrailing) {
+                        if showsFilmBadge {
+                            Image(systemName: "film")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(3)
+                                .background(Color.accentColor, in: Circle())
+                                .offset(x: 4, y: 4)
+                        }
+                    }
 
                 // Name and count
                 VStack(alignment: .leading, spacing: 2) {
