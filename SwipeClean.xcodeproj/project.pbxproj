@@ -12,6 +12,7 @@
 		1515F883591E3308E8D82385 /* SwipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F661A2608885E83B7679D15A /* SwipeTests.swift */; };
 		1A6D7FA6B0BDA58F5E242ACF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01D5C6A94AF8FA46B03D5702 /* Assets.xcassets */; };
 		1E11E207CFA153D1F67DCEF1 /* SessionCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68E642A93B866E0DE7E5EE9A /* SessionCompleteView.swift */; };
+		2D3AC883BCE507D71D22BF40 /* MusicPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6973C8FBFB4EBFA1701F937 /* MusicPicker.swift */; };
 		422370ED6F8C43A07AD003F5 /* PhotoDetailOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15C5733DA2D3FCFC27B4BFF /* PhotoDetailOverlay.swift */; };
 		4435DE38FFCEC778F314816D /* SwipeFormatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696B85FD1C5E5798DFE6B4D7 /* SwipeFormatters.swift */; };
 		467775E57B42EE49540413B1 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C59D41904470C8CD74CEC8 /* HomeView.swift */; };
@@ -19,10 +20,14 @@
 		4F3EB048077B42B17D8D86E4 /* HomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39C4B6855BF15D35CB4F63A /* HomeTests.swift */; };
 		51EEC75646A4F8D43BCD6853 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4DEB6056253EED0BB138DA /* OnboardingView.swift */; };
 		5EBC0FDDCDFC3AA2A1EC153C /* Protocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B54909C13E13BABFABD7CBF /* Protocols.swift */; };
+		67FBB6E9C944A45EF14DE718 /* SupercutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601A86FEBC52B158A5DF9063 /* SupercutSettingsView.swift */; };
 		6CB0235DC62687F736F4E5C1 /* DeleteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8820F5BBF354842CA83FCC4B /* DeleteManager.swift */; };
+		72D777E6CFA6AF8C6A458959 /* SupercutPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF15B686319A7D2AAD3FC387 /* SupercutPreviewView.swift */; };
 		8741D90A6BC8F5A8B1A1818A /* SettingsTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C59F0914B2714C8FA851F7 /* SettingsTypes.swift */; };
+		8CACC30E3A9B2E1C9D69E3CB /* PhotoAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD36DDAD06A1525F9C00A3A /* PhotoAnalyzer.swift */; };
 		90272E1602624B65C12386F0 /* CardStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55B95752284705439F1FFDC3 /* CardStack.swift */; };
 		A0E858EB8F5A4EF7C4BB6366 /* ReviewGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */; };
+		A5022C97FC280ED44EC28543 /* SupercutComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4E4B306D00AE64F3BE6D93 /* SupercutComposer.swift */; };
 		AA8A15B95036A54360D8BB4C /* SwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */; };
 		AC5CB397FFEC4693847C0CA9 /* SwipeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1252C802951E847291634AC0 /* SwipeCardView.swift */; };
 		AF6E9B826A818E6B46C6F3A9 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B9081BDADB279CAB149BE3 /* PermissionManager.swift */; };
@@ -34,15 +39,13 @@
 		BDADF98E4753F979C67D6C8B /* AlbumSourceGrouper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AC7AAB950423B6E1F9C8B98 /* AlbumSourceGrouper.swift */; };
 		BE3C60C52C541850EE1267C8 /* CardStackLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F2C26A9ECB8358D6DF9870 /* CardStackLayout.swift */; };
 		BF2D357702ECF8636336E104 /* SessionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA576A8EE3AC232C368422A /* SessionTracker.swift */; };
+		D553DF75CB78D79867A5E655 /* SupercutProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85ED9001BAE53FDECBE873A /* SupercutProgressView.swift */; };
 		DA8FD92228C7E5BB4EDD61E1 /* AlbumSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 947983D9B02CFFDB72D3B9EA /* AlbumSource.swift */; };
 		EB550BA29BC7BE979A3DB8F1 /* CoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E6B9AFC37C0584FAA7A83F3 /* CoreTests.swift */; };
 		F2B27195022C57C736942694 /* PhotoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3930469A393BBB854E9733 /* PhotoItem.swift */; };
 		FDB9CCF8AB1A75C44E4F0CB8 /* SwipeCleanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B84F6E07643F18CB833350 /* SwipeCleanApp.swift */; };
 		FEE2957CBF7D697F133A36C7 /* SwipeGestureCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D211B2444F447ECDC884C1 /* SwipeGestureCalculator.swift */; };
 		FF531312CF9A7A9B330F765E /* StorageFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E01D1E83BF6D7C0029DB52 /* StorageFormatter.swift */; };
-		A1B2C3D4E5F60718A9B0C1D2 /* MusicPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C60718D9E0F1A2 /* MusicPicker.swift */; };
-		B2C3D4E5F6A70829BAC1D2E3 /* SupercutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F3A4B5C6D70829EAF0A1B2 /* SupercutSettingsView.swift */; };
-		C3D4E5F6A7B8093ACBD2E3F4 /* PhotoAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A4B5C6D7E8093AFBA1B2C3 /* PhotoAnalyzer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,7 +61,9 @@
 /* Begin PBXFileReference section */
 		01D5C6A94AF8FA46B03D5702 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		02C59F0914B2714C8FA851F7 /* SettingsTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTypes.swift; sourceTree = "<group>"; };
+		0AD36DDAD06A1525F9C00A3A /* PhotoAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoAnalyzer.swift; sourceTree = "<group>"; };
 		0B54909C13E13BABFABD7CBF /* Protocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocols.swift; sourceTree = "<group>"; };
+		0F4E4B306D00AE64F3BE6D93 /* SupercutComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutComposer.swift; sourceTree = "<group>"; };
 		1252C802951E847291634AC0 /* SwipeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeCardView.swift; sourceTree = "<group>"; };
 		1CD63066F10836DEF97E6A44 /* PhotoLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLoader.swift; sourceTree = "<group>"; };
 		1DA576A8EE3AC232C368422A /* SessionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTracker.swift; sourceTree = "<group>"; };
@@ -68,6 +73,7 @@
 		49F2C26A9ECB8358D6DF9870 /* CardStackLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStackLayout.swift; sourceTree = "<group>"; };
 		51F0CA61F7FEE4D819F8DE4D /* SwipeHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeHistory.swift; sourceTree = "<group>"; };
 		55B95752284705439F1FFDC3 /* CardStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStack.swift; sourceTree = "<group>"; };
+		601A86FEBC52B158A5DF9063 /* SupercutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutSettingsView.swift; sourceTree = "<group>"; };
 		60D3B2A258979F64A910822A /* AlbumCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumCard.swift; sourceTree = "<group>"; };
 		65D211B2444F447ECDC884C1 /* SwipeGestureCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeGestureCalculator.swift; sourceTree = "<group>"; };
 		68E642A93B866E0DE7E5EE9A /* SessionCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompleteView.swift; sourceTree = "<group>"; };
@@ -85,6 +91,9 @@
 		AE3930469A393BBB854E9733 /* PhotoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoItem.swift; sourceTree = "<group>"; };
 		AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeView.swift; sourceTree = "<group>"; };
 		B39C4B6855BF15D35CB4F63A /* HomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTests.swift; sourceTree = "<group>"; };
+		B6973C8FBFB4EBFA1701F937 /* MusicPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicPicker.swift; sourceTree = "<group>"; };
+		B85ED9001BAE53FDECBE873A /* SupercutProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutProgressView.swift; sourceTree = "<group>"; };
+		BF15B686319A7D2AAD3FC387 /* SupercutPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutPreviewView.swift; sourceTree = "<group>"; };
 		C2B9081BDADB279CAB149BE3 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		C9F37A7A1EA6DDBBA8DC8C25 /* SessionCompleteLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompleteLogic.swift; sourceTree = "<group>"; };
 		E15C5733DA2D3FCFC27B4BFF /* PhotoDetailOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailOverlay.swift; sourceTree = "<group>"; };
@@ -92,9 +101,6 @@
 		E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewGridView.swift; sourceTree = "<group>"; };
 		F5C59D41904470C8CD74CEC8 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F661A2608885E83B7679D15A /* SwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTests.swift; sourceTree = "<group>"; };
-		D1E2F3A4B5C60718D9E0F1A2 /* MusicPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicPicker.swift; sourceTree = "<group>"; };
-		E2F3A4B5C6D70829EAF0A1B2 /* SupercutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutSettingsView.swift; sourceTree = "<group>"; };
-		F3A4B5C6D7E8093AFBA1B2C3 /* PhotoAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoAnalyzer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -106,7 +112,7 @@
 				D809F92E8ADD508ED25E6958 /* Core */,
 				59F640E24A33574531F6FA26 /* Models */,
 				E0139D4082F034550D5A0A6B /* Resources */,
-				A4B5C6D7E8F9A0B1C2D3E4F5 /* Supercut */,
+				FE3F473EFB851B5A1F99F6EF /* Supercut */,
 				AC18EE21C9C6CDB246F710B4 /* Views */,
 			);
 			name = SwipeClean;
@@ -190,16 +196,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		A4B5C6D7E8F9A0B1C2D3E4F5 /* Supercut */ = {
-			isa = PBXGroup;
-			children = (
-				D1E2F3A4B5C60718D9E0F1A2 /* MusicPicker.swift */,
-				F3A4B5C6D7E8093AFBA1B2C3 /* PhotoAnalyzer.swift */,
-				E2F3A4B5C6D70829EAF0A1B2 /* SupercutSettingsView.swift */,
-			);
-			path = Supercut;
-			sourceTree = "<group>";
-		};
 		AC18EE21C9C6CDB246F710B4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -247,6 +243,19 @@
 				AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */,
 			);
 			path = Swipe;
+			sourceTree = "<group>";
+		};
+		FE3F473EFB851B5A1F99F6EF /* Supercut */ = {
+			isa = PBXGroup;
+			children = (
+				B6973C8FBFB4EBFA1701F937 /* MusicPicker.swift */,
+				0AD36DDAD06A1525F9C00A3A /* PhotoAnalyzer.swift */,
+				0F4E4B306D00AE64F3BE6D93 /* SupercutComposer.swift */,
+				BF15B686319A7D2AAD3FC387 /* SupercutPreviewView.swift */,
+				B85ED9001BAE53FDECBE873A /* SupercutProgressView.swift */,
+				601A86FEBC52B158A5DF9063 /* SupercutSettingsView.swift */,
+			);
+			path = Supercut;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -351,9 +360,11 @@
 				BE3C60C52C541850EE1267C8 /* CardStackLayout.swift in Sources */,
 				6CB0235DC62687F736F4E5C1 /* DeleteManager.swift in Sources */,
 				467775E57B42EE49540413B1 /* HomeView.swift in Sources */,
+				2D3AC883BCE507D71D22BF40 /* MusicPicker.swift in Sources */,
 				BAF0AC876F501AD8DD9491AD /* OnboardingPage.swift in Sources */,
 				51EEC75646A4F8D43BCD6853 /* OnboardingView.swift in Sources */,
 				AF6E9B826A818E6B46C6F3A9 /* PermissionManager.swift in Sources */,
+				8CACC30E3A9B2E1C9D69E3CB /* PhotoAnalyzer.swift in Sources */,
 				422370ED6F8C43A07AD003F5 /* PhotoDetailOverlay.swift in Sources */,
 				F2B27195022C57C736942694 /* PhotoItem.swift in Sources */,
 				BC6E684EB67C5A209D1E5BD4 /* PhotoLoader.swift in Sources */,
@@ -366,15 +377,16 @@
 				092C8F21BD7C7378B104E7E8 /* SettingsView.swift in Sources */,
 				11EE6007D2237A59C45E7692 /* StatsCard.swift in Sources */,
 				FF531312CF9A7A9B330F765E /* StorageFormatter.swift in Sources */,
+				A5022C97FC280ED44EC28543 /* SupercutComposer.swift in Sources */,
+				72D777E6CFA6AF8C6A458959 /* SupercutPreviewView.swift in Sources */,
+				D553DF75CB78D79867A5E655 /* SupercutProgressView.swift in Sources */,
+				67FBB6E9C944A45EF14DE718 /* SupercutSettingsView.swift in Sources */,
 				AC5CB397FFEC4693847C0CA9 /* SwipeCardView.swift in Sources */,
 				FDB9CCF8AB1A75C44E4F0CB8 /* SwipeCleanApp.swift in Sources */,
 				4435DE38FFCEC778F314816D /* SwipeFormatters.swift in Sources */,
 				FEE2957CBF7D697F133A36C7 /* SwipeGestureCalculator.swift in Sources */,
 				B5323E0147C8CD3DC4A46D5D /* SwipeHistory.swift in Sources */,
 				AA8A15B95036A54360D8BB4C /* SwipeView.swift in Sources */,
-				A1B2C3D4E5F60718A9B0C1D2 /* MusicPicker.swift in Sources */,
-				B2C3D4E5F6A70829BAC1D2E3 /* SupercutSettingsView.swift in Sources */,
-				C3D4E5F6A7B8093ACBD2E3F4 /* PhotoAnalyzer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

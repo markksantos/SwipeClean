@@ -1,35 +1,7 @@
 import SwiftUI
 import Photos
 
-// MARK: - CutSpeed
-
-enum CutSpeed: String, CaseIterable, Identifiable {
-    case fast
-    case medium
-    case slow
-    case matchBeat
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .fast: return "Fast"
-        case .medium: return "Medium"
-        case .slow: return "Slow"
-        case .matchBeat: return "Match Music Beat"
-        }
-    }
-
-    /// Seconds each photo is displayed.
-    var secondsPerPhoto: Double {
-        switch self {
-        case .fast: return 0.5
-        case .medium: return 1.0
-        case .slow: return 2.0
-        case .matchBeat: return 0.0 // determined by audio analysis
-        }
-    }
-}
+// CutSpeed is defined in SupercutComposer.swift
 
 // MARK: - MaxDuration
 
@@ -102,7 +74,7 @@ struct SupercutSettingsView: View {
             } header: {
                 Text("Transition Speed")
             } footer: {
-                if cutSpeed == .matchBeat {
+                if cutSpeed == .beatMatch {
                     Text("Photo transitions will sync to the beat of the selected music.")
                 }
             }
