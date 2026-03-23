@@ -11,6 +11,7 @@ final class PhotoLoader: ObservableObject {
     @Published private(set) var upcomingPhotos: [PhotoItem] = []
     @Published private(set) var currentIndex: Int = 0
     @Published private(set) var totalCount: Int = 0
+    @Published private(set) var isLoading: Bool = false
 
     var progress: Float {
         guard totalCount > 0 else { return 0 }
@@ -65,15 +66,17 @@ final class PhotoLoader: ObservableObject {
     /// Fetches photos from the given album source and loads them.
     /// Heavy fetch work runs on a background queue to avoid blocking the UI.
     func loadSource(_ source: AlbumSource, sortOrder: SortOrder = .newestFirst) {
+        isLoading = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let assets = self?.assetFetcher.fetchAssets(for: source, sortOrder: sortOrder) ?? []
+            guard let self = self else { return }
+            let assets = self.assetFetcher.fetchAssets(for: source, sortOrder: sortOrder)
             var items = assets.map { PhotoItem(asset: $0) }
-            // Shuffle for random mode
             if source == .random {
                 items.shuffle()
             }
             DispatchQueue.main.async {
-                self?.loadItems(items)
+                self.loadItems(items)
+                self.isLoading = false
             }
         }
     }

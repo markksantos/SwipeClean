@@ -122,7 +122,7 @@ struct SwipeView: View {
             VStack(spacing: 2) {
                 Text(albumName)
                     .font(.subheadline.weight(.semibold))
-                Text("\(photoLoader.currentIndex + 1) of \(photoLoader.totalCount)")
+                Text(photoLoader.totalCount > 0 ? "\(photoLoader.currentIndex + 1) of \(photoLoader.totalCount)" : "Loading...")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -138,15 +138,38 @@ struct SwipeView: View {
     // MARK: - Card Stack Section
 
     private var cardStackSection: some View {
-        CardStack(
-            swipeThreshold: swipeThreshold,
-            onShowDetail: { photo in
-                detailPhoto = photo
-                showDetail = true
+        Group {
+            if photoLoader.isLoading {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading photos...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if photoLoader.totalCount == 0 {
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.tertiary)
+                    Text("No photos found")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                CardStack(
+                    swipeThreshold: swipeThreshold,
+                    onShowDetail: { photo in
+                        detailPhoto = photo
+                        showDetail = true
+                    }
+                )
+                .environmentObject(photoLoader)
+                .environmentObject(deleteManager)
             }
-        )
-        .environmentObject(photoLoader)
-        .environmentObject(deleteManager)
+        }
         .environmentObject(sessionTracker)
     }
 
