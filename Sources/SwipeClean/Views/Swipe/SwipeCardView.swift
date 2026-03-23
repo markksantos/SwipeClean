@@ -80,9 +80,35 @@ struct SwipeCardView: View {
     @ViewBuilder
     private var photoImage: some View {
         if let image = photo.fullImage ?? photo.thumbnail {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+            ZStack {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+
+                if photo.mediaType == .video {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.white, .black.opacity(0.4))
+                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+
+                    if let duration = photo.duration, duration > 0 {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                Text(SwipeFormatters.duration(seconds: duration))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(.black.opacity(0.6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .padding(8)
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             Rectangle()
                 .fill(Color(.systemGray5))
