@@ -52,7 +52,7 @@ struct CardStack: View {
                 if let image = photo.thumbnail ?? photo.fullImage {
                     Image(uiImage: image)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .aspectRatio(contentMode: .fit)
                         .frame(width: cardWidth, height: cardHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 } else {

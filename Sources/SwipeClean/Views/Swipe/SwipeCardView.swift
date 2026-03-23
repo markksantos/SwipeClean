@@ -69,7 +69,7 @@ struct SwipeCardView: View {
         if let image = photo.fullImage ?? photo.thumbnail {
             Image(uiImage: image)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .aspectRatio(contentMode: .fit)
         } else {
             Rectangle()
                 .fill(Color(.systemGray5))
