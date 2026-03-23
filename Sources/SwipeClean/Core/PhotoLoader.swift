@@ -27,11 +27,10 @@ final class PhotoLoader: ObservableObject {
     static let preloadCount = 3
     static let thumbnailSize = CGSize(width: 600, height: 600)
 
-    var fullImageSize: CGSize {
-        let screen = UIScreen.main
-        let scale = screen.scale
-        let bounds = screen.bounds
-        return CGSize(width: bounds.width * scale, height: bounds.height * scale)
+    /// Screen-sized image (1x scale — sharp enough, not wastefully large)
+    var displayImageSize: CGSize {
+        let bounds = UIScreen.main.bounds
+        return CGSize(width: bounds.width, height: bounds.height)
     }
 
     // MARK: - Private State
@@ -40,7 +39,7 @@ final class PhotoLoader: ObservableObject {
     private let assetFetcher: AssetFetching
     private var allItems: [PhotoItem] = []
     private var activeWindow: [PhotoItem] = []
-    private var activeRequestIDs: [String: PHImageRequestID] = [:]
+    private var activeRequestIDs: [String: Set<PHImageRequestID>] = [:]
 
     // MARK: - Init
 
@@ -64,7 +63,6 @@ final class PhotoLoader: ObservableObject {
     }
 
     /// Fetches photos from the given album source and loads them.
-    /// Heavy fetch work runs on a background queue to avoid blocking the UI.
     func loadSource(_ source: AlbumSource, sortOrder: SortOrder = .newestFirst) {
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -139,80 +137,54 @@ final class PhotoLoader: ObservableObject {
     private func preloadAround(_ index: Int) {
         guard index < totalCount else { return }
 
-        // Load full-res for current
+        // Load display-quality image for current photo
         let current = allItems[index]
-        loadFullImage(for: current)
+        loadDisplayImage(for: current)
 
-        // Load thumbnails for upcoming
+        // Preload thumbnails for upcoming cards
         let preloadEnd = min(totalCount, index + 1 + Self.preloadCount)
         for i in (index + 1)..<preloadEnd {
             loadThumbnail(for: allItems[i])
         }
     }
 
-    private func loadFullImage(for item: PhotoItem) {
+    private func loadDisplayImage(for item: PhotoItem) {
         guard let asset = item.asset else { return }
+        // Skip if already loaded at full quality
+        if item.fullImage != nil { return }
 
-        // Fast path: if PHImageManager already has the image cached, load synchronously
-        // to avoid a flash of loading state.
-        let syncOptions = PHImageRequestOptions()
-        syncOptions.isSynchronous = true
-        syncOptions.deliveryMode = .fastFormat
-        syncOptions.isNetworkAccessAllowed = false
-        syncOptions.resizeMode = .fast
-
-        var foundCached = false
-        imageLoader.requestImage(
-            for: asset,
-            targetSize: fullImageSize,
-            contentMode: .aspectFit,
-            options: syncOptions
-        ) { [weak item] image, info in
-            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-            if let image = image, !isDegraded {
-                item?.fullImage = image
-                item?.thumbnail = item?.thumbnail ?? image
-                foundCached = true
-            }
+        // First: fast thumbnail so something shows immediately
+        if item.thumbnail == nil {
+            loadThumbnail(for: item)
         }
 
-        if foundCached {
-            objectWillChange.send()
-            return
-        }
-
-        // Async path for non-cached images
+        // Then: high quality display image (non-degraded)
         let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true
         options.isSynchronous = false
-        options.resizeMode = .fast
+        options.resizeMode = .exact
 
         let requestID = imageLoader.requestImage(
             for: asset,
-            targetSize: fullImageSize,
+            targetSize: displayImageSize,
             contentMode: .aspectFit,
             options: options
-        ) { [weak self, weak item] image, info in
+        ) { [weak self, weak item] image, _ in
             DispatchQueue.main.async {
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if let image = image {
-                    item?.fullImage = image
-                    if !isDegraded {
-                        item?.thumbnail = item?.thumbnail ?? image
-                    }
-                    self?.objectWillChange.send()
-                }
+                guard let image = image, let item = item else { return }
+                item.fullImage = image
+                self?.objectWillChange.send()
             }
         }
-        activeRequestIDs[item.id] = requestID
+        trackRequest(requestID, for: item.id)
     }
 
     private func loadThumbnail(for item: PhotoItem) {
         guard let asset = item.asset, item.thumbnail == nil else { return }
 
         let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true
         options.isSynchronous = false
         options.resizeMode = .fast
@@ -224,13 +196,21 @@ final class PhotoLoader: ObservableObject {
             options: options
         ) { [weak self, weak item] image, _ in
             DispatchQueue.main.async {
-                if let image = image {
-                    item?.thumbnail = image
-                    self?.objectWillChange.send()
-                }
+                guard let image = image, let item = item else { return }
+                item.thumbnail = image
+                self?.objectWillChange.send()
             }
         }
-        activeRequestIDs[item.id] = requestID
+        trackRequest(requestID, for: item.id)
+    }
+
+    // MARK: - Request Tracking
+
+    private func trackRequest(_ requestID: PHImageRequestID, for itemID: String) {
+        if activeRequestIDs[itemID] == nil {
+            activeRequestIDs[itemID] = Set()
+        }
+        activeRequestIDs[itemID]?.insert(requestID)
     }
 
     // MARK: - Cancellation
@@ -243,9 +223,11 @@ final class PhotoLoader: ObservableObject {
         let windowIDs = Set((windowStart..<windowEnd).map { allItems[$0].id })
         var toRemove: [String] = []
 
-        for (itemID, requestID) in activeRequestIDs {
+        for (itemID, requestIDs) in activeRequestIDs {
             if !windowIDs.contains(itemID) {
-                imageLoader.cancelImageRequest(requestID)
+                for requestID in requestIDs {
+                    imageLoader.cancelImageRequest(requestID)
+                }
                 toRemove.append(itemID)
             }
         }
