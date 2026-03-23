@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A single photo card with drag gesture, rotation, overlay indicators, and haptics.
+/// A single photo card with drag gesture, pinch-to-zoom, rotation, overlay indicators, and haptics.
 struct SwipeCardView: View {
     let photo: PhotoItem
     let swipeThreshold: CGFloat
@@ -14,12 +14,14 @@ struct SwipeCardView: View {
     @State private var isFlyingOff = false
     @State private var flyDirection: SwipeDirection = .none
     @State private var wasPastThreshold = false
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var lastZoomScale: CGFloat = 1.0
 
-    private let velocityThreshold: CGFloat = 800
+    private let velocityThreshold: CGFloat = 500
 
     var body: some View {
         GeometryReader { geometry in
-            let cardWidth = geometry.size.width - 32 // 16pt padding each side
+            let cardWidth = geometry.size.width - 32
             let cardHeight = cardWidth * (4.0 / 3.0)
 
             ZStack {
@@ -27,16 +29,17 @@ struct SwipeCardView: View {
                 photoImage
                     .frame(width: cardWidth, height: cardHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .scaleEffect(zoomScale)
 
                 // Keep overlay (right swipe)
-                if offset > 0 {
+                if offset > 0 && zoomScale <= 1.0 {
                     keepOverlay
                         .frame(width: cardWidth, height: cardHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
                 // Delete overlay (left swipe)
-                if offset < 0 {
+                if offset < 0 && zoomScale <= 1.0 {
                     deleteOverlay
                         .frame(width: cardWidth, height: cardHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -56,8 +59,18 @@ struct SwipeCardView: View {
             .opacity(isFlyingOff ? 0 : 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
-            .gesture(dragGesture)
-            .onTapGesture(count: 2) { onDoubleTap() }
+            .gesture(zoomScale > 1.0 ? nil : dragGesture)
+            .simultaneousGesture(pinchGesture)
+            .onTapGesture(count: 2) {
+                if zoomScale > 1.0 {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        zoomScale = 1.0
+                        lastZoomScale = 1.0
+                    }
+                } else {
+                    onDoubleTap()
+                }
+            }
             .onLongPressGesture(minimumDuration: 0.5) { onLongPress() }
         }
     }
@@ -97,7 +110,7 @@ struct SwipeCardView: View {
             }
             .foregroundColor(.white)
             .scaleEffect(scale)
-            .opacity(opacity / 0.7) // normalize to 0...1
+            .opacity(opacity / 0.7)
         }
     }
 
@@ -121,10 +134,29 @@ struct SwipeCardView: View {
         }
     }
 
+    // MARK: - Pinch to Zoom
+
+    private var pinchGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                let newScale = lastZoomScale * value
+                zoomScale = min(max(newScale, 1.0), 5.0)
+            }
+            .onEnded { _ in
+                lastZoomScale = zoomScale
+                if zoomScale <= 1.05 {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        zoomScale = 1.0
+                        lastZoomScale = 1.0
+                    }
+                }
+            }
+    }
+
     // MARK: - Drag Gesture
 
     private var dragGesture: some Gesture {
-        DragGesture()
+        DragGesture(minimumDistance: 10)
             .onChanged { value in
                 guard !isFlyingOff else { return }
                 offset = value.translation.width
@@ -152,7 +184,7 @@ struct SwipeCardView: View {
                     mediumHaptic()
                     flyOff(direction: direction)
                 } else {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         offset = 0
                         wasPastThreshold = false
                     }
@@ -164,11 +196,10 @@ struct SwipeCardView: View {
 
     private func flyOff(direction: SwipeDirection) {
         flyDirection = direction
-        withAnimation(.spring(response: 0.3, dampingFraction: 1.0)) {
+        // Fire callback immediately so next card loads without delay
+        onSwiped(direction)
+        withAnimation(.easeOut(duration: 0.2)) {
             isFlyingOff = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            onSwiped(direction)
         }
     }
 
