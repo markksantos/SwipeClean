@@ -134,10 +134,23 @@ struct AlbumCard: View {
             options.fetchLimit = 1
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
             fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-        case .duplicates:
+        case .onThisDay, .random, .duplicates:
             let options = PHFetchOptions()
             options.fetchLimit = 1
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            fetchResult = PHAsset.fetchAssets(with: options)
+        case .month(let year, let month):
+            let calendar = Calendar.current
+            var startComps = DateComponents()
+            startComps.year = year
+            startComps.month = month
+            startComps.day = 1
+            guard let start = calendar.date(from: startComps),
+                  let end = calendar.date(byAdding: .month, value: 1, to: start) else { return nil }
+            let options = PHFetchOptions()
+            options.fetchLimit = 1
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", start as NSDate, end as NSDate)
             fetchResult = PHAsset.fetchAssets(with: options)
         }
 

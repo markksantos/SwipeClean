@@ -67,7 +67,11 @@ final class PhotoLoader: ObservableObject {
     func loadSource(_ source: AlbumSource, sortOrder: SortOrder = .newestFirst) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let assets = self?.assetFetcher.fetchAssets(for: source, sortOrder: sortOrder) ?? []
-            let items = assets.map { PhotoItem(asset: $0) }
+            var items = assets.map { PhotoItem(asset: $0) }
+            // Shuffle for random mode
+            if source == .random {
+                items.shuffle()
+            }
             DispatchQueue.main.async {
                 self?.loadItems(items)
             }

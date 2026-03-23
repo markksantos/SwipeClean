@@ -11,18 +11,21 @@ struct HomeView: View {
     @State private var cardsVisible = false
     @State private var animateGradient = false
 
-    private var grouped: (smart: [AlbumSourceInfo], user: [AlbumSourceInfo]) {
+    private var grouped: (smart: [AlbumSourceInfo], months: [AlbumSourceInfo], user: [AlbumSourceInfo]) {
         var smart: [AlbumSourceInfo] = []
+        var months: [AlbumSourceInfo] = []
         var user: [AlbumSourceInfo] = []
         for info in albumProvider.sources {
             switch info.source {
             case .album:
                 user.append(info)
+            case .month:
+                months.append(info)
             default:
                 smart.append(info)
             }
         }
-        return (smart, user)
+        return (smart, months, user)
     }
 
     var body: some View {
@@ -106,6 +109,27 @@ struct HomeView: View {
                                 .offset(y: cardsVisible ? 0 : 20)
                                 .animation(
                                     .easeOut(duration: 0.4).delay(Double(index) * 0.06),
+                                    value: cardsVisible
+                                )
+                            }
+                        }
+                    }
+
+                    // By Month
+                    if !grouped.months.isEmpty {
+                        sectionHeader("By Month")
+                        LazyVStack(spacing: 10) {
+                            ForEach(Array(grouped.months.enumerated()), id: \.element.source) { index, info in
+                                AlbumCard(
+                                    source: info.source,
+                                    photoCount: info.count
+                                ) {
+                                    navigationPath.append(info)
+                                }
+                                .opacity(cardsVisible ? 1 : 0)
+                                .offset(y: cardsVisible ? 0 : 20)
+                                .animation(
+                                    .easeOut(duration: 0.4).delay(Double(grouped.smart.count + index) * 0.06),
                                     value: cardsVisible
                                 )
                             }
