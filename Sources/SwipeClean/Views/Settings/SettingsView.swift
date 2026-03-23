@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject private var sessionTracker: SessionTracker
@@ -58,6 +59,32 @@ struct SettingsView: View {
                     Text("Appearance")
                 }
 
+                // MARK: - Session History
+                Section {
+                    LabeledContent("Photos Reviewed") {
+                        Text(formatNumber(sessionTracker.lifetimeStats.totalPhotosReviewed))
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Photos Cleaned") {
+                        Text(formatNumber(sessionTracker.lifetimeStats.totalDeleted))
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Storage Freed") {
+                        Text(StorageFormatter.humanReadable(bytes: sessionTracker.lifetimeStats.totalStorageFreed))
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Total Sessions") {
+                        Text(formatNumber(sessionTracker.lifetimeStats.totalSessions))
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Longest Streak") {
+                        Text("\(formatNumber(sessionTracker.lifetimeStats.longestStreak)) in a row")
+                            .monospacedDigit()
+                    }
+                } header: {
+                    Label("Session History", systemImage: "chart.bar.fill")
+                }
+
                 // MARK: - Data
                 Section {
                     Button(role: .destructive) {
@@ -106,6 +133,8 @@ struct SettingsView: View {
             .alert("Reset Statistics?", isPresented: $showResetConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Reset", role: .destructive) {
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.warning)
                     resetLifetimeStats()
                 }
             } message: {
@@ -120,6 +149,13 @@ struct SettingsView: View {
                 Text("This will remove all photos from the deletion queue without deleting them.")
             }
         }
+    }
+
+    /// Formats a number with locale-aware grouping (e.g. 1,234).
+    private func formatNumber(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     /// Resets lifetime stats by clearing the persisted UserDefaults keys.
