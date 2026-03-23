@@ -5,6 +5,7 @@ import SwiftUI
 struct CardStack: View {
     @EnvironmentObject var photoLoader: PhotoLoader
     @EnvironmentObject var deleteManager: DeleteManager
+    @EnvironmentObject var sessionTracker: SessionTracker
 
     let swipeThreshold: CGFloat
     let onShowDetail: (PhotoItem) -> Void
@@ -88,11 +89,13 @@ struct CardStack: View {
         case .right:
             // Keep: just advance
             swipeHistory.push(action: .kept, photoId: photo.id)
+            sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
             photoLoader.advance()
         case .left:
             // Delete: mark for deletion, then advance
             swipeHistory.push(action: .deleted, photoId: photo.id)
             deleteManager.markForDeletion(photo)
+            sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
             photoLoader.advance()
         case .none:
             break

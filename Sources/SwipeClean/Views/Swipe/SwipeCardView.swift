@@ -8,6 +8,8 @@ struct SwipeCardView: View {
     let onDoubleTap: () -> Void
     let onLongPress: () -> Void
 
+    @AppStorage("settings_haptic_feedback") private var hapticFeedbackEnabled: Bool = true
+
     @State private var offset: CGFloat = 0
     @State private var isFlyingOff = false
     @State private var flyDirection: SwipeDirection = .none
@@ -173,11 +175,13 @@ struct SwipeCardView: View {
     // MARK: - Haptics
 
     private func lightHaptic() {
+        guard hapticFeedbackEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
 
     private func mediumHaptic() {
+        guard hapticFeedbackEnabled else { return }
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
     }

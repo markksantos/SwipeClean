@@ -16,7 +16,7 @@ struct SessionCompleteView: View {
     @State private var showConfetti = false
 
     private var shouldShowConfetti: Bool {
-        SessionCompleteLogic.shouldShowConfetti(storageFreed: deleteManager.storageFreed)
+        SessionCompleteLogic.shouldShowConfetti(storageFreed: sessionTracker.sessionStats.storageFreed)
     }
 
     var body: some View {
@@ -66,6 +66,7 @@ struct SessionCompleteView: View {
                 DeletionPreviewGrid(photos: deleteManager.trashQueue)
             }
             .onAppear {
+                sessionTracker.endSession()
                 withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
                     animateStats = true
                 }
@@ -84,7 +85,7 @@ struct SessionCompleteView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.accentColor)
 
-            Text("\(deleteManager.photosDeleted)")
+            Text("\(sessionTracker.sessionStats.photosDeleted)")
                 .font(.system(size: 64, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
                 .scaleEffect(animateStats ? 1.0 : 0.5)
@@ -100,11 +101,11 @@ struct SessionCompleteView: View {
 
     private var statsRow: some View {
         HStack(spacing: 4) {
-            Text("Reviewed: \(deleteManager.photosReviewed)")
+            Text("Reviewed: \(sessionTracker.sessionStats.photosReviewed)")
             Text("·")
-            Text("Kept: \(deleteManager.photosKept)")
+            Text("Kept: \(sessionTracker.sessionStats.photosKept)")
             Text("·")
-            Text("Deleted: \(deleteManager.photosDeleted)")
+            Text("Deleted: \(sessionTracker.sessionStats.photosDeleted)")
         }
         .font(.subheadline)
         .foregroundColor(.secondary)
@@ -115,7 +116,7 @@ struct SessionCompleteView: View {
 
     private var storageFreedDisplay: some View {
         VStack(spacing: 4) {
-            Text(SwipeFormatters.fileSize(bytes: deleteManager.storageFreed))
+            Text(SwipeFormatters.fileSize(bytes: sessionTracker.sessionStats.storageFreed))
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
                 .scaleEffect(animateStats ? 1.0 : 0.5)
@@ -133,9 +134,8 @@ struct SessionCompleteView: View {
         VStack(spacing: 12) {
             // Delete Now
             Button {
-                Task {
-                    isDeleting = true
-                    await deleteManager.executeDelete()
+                isDeleting = true
+                deleteManager.executeQueuedDeletions { _ in
                     isDeleting = false
                     deleteComplete = true
                 }

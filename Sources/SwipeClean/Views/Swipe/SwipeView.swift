@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Main swipe screen. Layout: progress bar, top bar, card stack, photo info, action buttons.
 struct SwipeView: View {
-    @EnvironmentObject var photoLoader: PhotoLoader
+    @StateObject private var photoLoader = PhotoLoader()
     @EnvironmentObject var deleteManager: DeleteManager
     @EnvironmentObject var sessionTracker: SessionTracker
 
@@ -11,9 +11,11 @@ struct SwipeView: View {
     @State private var showDetail = false
     @State private var detailPhoto: PhotoItem?
     @State private var showSessionComplete = false
+    @State private var showDoneConfirmation = false
     @State private var swipeThreshold: CGFloat = 120
 
     var albumName: String = "All Photos"
+    var albumSource: AlbumSource = .allPhotos
 
     var body: some View {
         ZStack {
@@ -56,6 +58,27 @@ struct SwipeView: View {
                 .environmentObject(deleteManager)
                 .environmentObject(sessionTracker)
         }
+        .fullScreenCover(isPresented: $showDoneConfirmation) {
+            SessionCompleteView()
+                .environmentObject(deleteManager)
+                .environmentObject(sessionTracker)
+        }
+        .onAppear {
+            if photoLoader.totalCount == 0 {
+                photoLoader.loadSource(albumSource)
+            }
+            sessionTracker.startSession()
+
+            let sensitivity = UserDefaults.standard.string(forKey: "settings_swipe_sensitivity") ?? "medium"
+            switch sensitivity {
+            case "low":
+                swipeThreshold = 160
+            case "high":
+                swipeThreshold = 80
+            default:
+                swipeThreshold = 120
+            }
+        }
         .onChange(of: photoLoader.currentPhoto == nil) { isNil in
             if isNil && photoLoader.currentIndex >= photoLoader.totalCount && photoLoader.totalCount > 0 {
                 showSessionComplete = true
@@ -83,7 +106,11 @@ struct SwipeView: View {
     private var topBar: some View {
         HStack {
             Button {
-                dismiss()
+                if !deleteManager.trashQueue.isEmpty {
+                    showDoneConfirmation = true
+                } else {
+                    dismiss()
+                }
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 18, weight: .semibold))
@@ -120,6 +147,7 @@ struct SwipeView: View {
         )
         .environmentObject(photoLoader)
         .environmentObject(deleteManager)
+        .environmentObject(sessionTracker)
     }
 
     // MARK: - Photo Info
@@ -158,6 +186,7 @@ struct SwipeView: View {
             Button {
                 if let photo = photoLoader.currentPhoto {
                     deleteManager.markForDeletion(photo)
+                    sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
                     photoLoader.advance()
                 }
             } label: {
@@ -189,6 +218,9 @@ struct SwipeView: View {
 
             // Keep button
             Button {
+                if let photo = photoLoader.currentPhoto {
+                    sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
+                }
                 photoLoader.advance()
             } label: {
                 Image(systemName: "checkmark")
