@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -67,7 +67,7 @@
 		1252C802951E847291634AC0 /* SwipeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeCardView.swift; sourceTree = "<group>"; };
 		1CD63066F10836DEF97E6A44 /* PhotoLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLoader.swift; sourceTree = "<group>"; };
 		1DA576A8EE3AC232C368422A /* SessionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTracker.swift; sourceTree = "<group>"; };
-		2BD4F0ABAC8E138BE2B9692C /* SwipeClean.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SwipeClean.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BD4F0ABAC8E138BE2B9692C /* SwipeClean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwipeClean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		35E01D1E83BF6D7C0029DB52 /* StorageFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageFormatter.swift; sourceTree = "<group>"; };
 		3A636727BD7512F2B965F87E /* StatsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCard.swift; sourceTree = "<group>"; };
 		49F2C26A9ECB8358D6DF9870 /* CardStackLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStackLayout.swift; sourceTree = "<group>"; };
@@ -97,7 +97,7 @@
 		C2B9081BDADB279CAB149BE3 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		C9F37A7A1EA6DDBBA8DC8C25 /* SessionCompleteLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompleteLogic.swift; sourceTree = "<group>"; };
 		E15C5733DA2D3FCFC27B4BFF /* PhotoDetailOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailOverlay.swift; sourceTree = "<group>"; };
-		E48967298F8CA49401302E38 /* SwipeCleanTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SwipeCleanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E48967298F8CA49401302E38 /* SwipeCleanTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper; path = SwipeCleanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewGridView.swift; sourceTree = "<group>"; };
 		F5C59D41904470C8CD74CEC8 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F661A2608885E83B7679D15A /* SwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTests.swift; sourceTree = "<group>"; };
@@ -316,7 +316,6 @@
 			);
 			mainGroup = A51C07F7277E55C3D7A7F95E;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -505,6 +504,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 8W75GJ2YQ3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Sources/SwipeClean/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "SwipeClean needs access to your photo library so you can swipe through photos to keep or delete them.";
@@ -528,6 +528,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 8W75GJ2YQ3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Sources/SwipeClean/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "SwipeClean needs access to your photo library so you can swipe through photos to keep or delete them.";
