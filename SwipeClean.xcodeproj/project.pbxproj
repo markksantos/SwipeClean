@@ -29,6 +29,7 @@
 		A0E858EB8F5A4EF7C4BB6366 /* ReviewGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */; };
 		A5022C97FC280ED44EC28543 /* SupercutComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4E4B306D00AE64F3BE6D93 /* SupercutComposer.swift */; };
 		AA8A15B95036A54360D8BB4C /* SwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */; };
+		A1B2C3D4E5F60002 /* DeletionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60001 /* DeletionReviewView.swift */; };
 		AC5CB397FFEC4693847C0CA9 /* SwipeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1252C802951E847291634AC0 /* SwipeCardView.swift */; };
 		AF6E9B826A818E6B46C6F3A9 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B9081BDADB279CAB149BE3 /* PermissionManager.swift */; };
 		B5323E0147C8CD3DC4A46D5D /* SwipeHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F0CA61F7FEE4D819F8DE4D /* SwipeHistory.swift */; };
@@ -90,6 +91,7 @@
 		9D4DEB6056253EED0BB138DA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AE3930469A393BBB854E9733 /* PhotoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoItem.swift; sourceTree = "<group>"; };
 		AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60001 /* DeletionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeletionReviewView.swift; sourceTree = "<group>"; };
 		B39C4B6855BF15D35CB4F63A /* HomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTests.swift; sourceTree = "<group>"; };
 		B6973C8FBFB4EBFA1701F937 /* MusicPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicPicker.swift; sourceTree = "<group>"; };
 		B85ED9001BAE53FDECBE873A /* SupercutProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupercutProgressView.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				65D211B2444F447ECDC884C1 /* SwipeGestureCalculator.swift */,
 				51F0CA61F7FEE4D819F8DE4D /* SwipeHistory.swift */,
 				AFB19EEC564A21D5D97FDD53 /* SwipeView.swift */,
+				A1B2C3D4E5F60001 /* DeletionReviewView.swift */,
 			);
 			path = Swipe;
 			sourceTree = "<group>";
@@ -386,6 +389,7 @@
 				FEE2957CBF7D697F133A36C7 /* SwipeGestureCalculator.swift in Sources */,
 				B5323E0147C8CD3DC4A46D5D /* SwipeHistory.swift in Sources */,
 				AA8A15B95036A54360D8BB4C /* SwipeView.swift in Sources */,
+				A1B2C3D4E5F60002 /* DeletionReviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

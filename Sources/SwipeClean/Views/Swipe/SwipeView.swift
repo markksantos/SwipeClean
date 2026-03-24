@@ -59,7 +59,7 @@ struct SwipeView: View {
                 .environmentObject(sessionTracker)
         }
         .fullScreenCover(isPresented: $showDoneConfirmation) {
-            SessionCompleteView()
+            DeletionReviewView()
                 .environmentObject(deleteManager)
                 .environmentObject(sessionTracker)
         }
@@ -129,9 +129,28 @@ struct SwipeView: View {
 
             Spacer()
 
-            // Spacer to balance the close button
-            Color.clear
-                .frame(width: 18, height: 18)
+            // Done button with trash count badge
+            if !deleteManager.trashQueue.isEmpty {
+                Button {
+                    showDoneConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Done")
+                            .font(.subheadline.weight(.semibold))
+                        Text("\(deleteManager.trashQueue.count)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(red: 255 / 255, green: 59 / 255, blue: 48 / 255))
+                            .clipShape(Capsule())
+                    }
+                    .foregroundColor(.primary)
+                }
+            } else {
+                Color.clear
+                    .frame(width: 18, height: 18)
+            }
         }
     }
 

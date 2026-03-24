@@ -9,9 +9,9 @@ enum CardStackLayout {
     static func scale(forIndex index: Int) -> CGFloat {
         switch index {
         case 0: return 1.0
-        case 1: return 0.95
-        case 2: return 0.90
-        default: return 0.90
+        case 1: return 0.93
+        case 2: return 0.86
+        default: return 0.86
         }
     }
 
@@ -19,9 +19,9 @@ enum CardStackLayout {
     static func yOffset(forIndex index: Int) -> CGFloat {
         switch index {
         case 0: return 0.0
-        case 1: return 8.0
-        case 2: return 16.0
-        default: return 16.0
+        case 1: return 28.0
+        case 2: return 52.0
+        default: return 52.0
         }
     }
 }
