@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		092C8F21BD7C7378B104E7E8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E88DAD9F4DAA169A0B3BBE2 /* SettingsView.swift */; };
 		11EE6007D2237A59C45E7692 /* StatsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A636727BD7512F2B965F87E /* StatsCard.swift */; };
+		C0A1B2C3D4E5F678 /* StorageBreakdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A1B2C3D4E5F679 /* StorageBreakdownView.swift */; };
 		1515F883591E3308E8D82385 /* SwipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F661A2608885E83B7679D15A /* SwipeTests.swift */; };
 		1A6D7FA6B0BDA58F5E242ACF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01D5C6A94AF8FA46B03D5702 /* Assets.xcassets */; };
 		1E11E207CFA153D1F67DCEF1 /* SessionCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68E642A93B866E0DE7E5EE9A /* SessionCompleteView.swift */; };
@@ -47,6 +48,18 @@
 		FDB9CCF8AB1A75C44E4F0CB8 /* SwipeCleanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B84F6E07643F18CB833350 /* SwipeCleanApp.swift */; };
 		FEE2957CBF7D697F133A36C7 /* SwipeGestureCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D211B2444F447ECDC884C1 /* SwipeGestureCalculator.swift */; };
 		FF531312CF9A7A9B330F765E /* StorageFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E01D1E83BF6D7C0029DB52 /* StorageFormatter.swift */; };
+		D2A3B4C5E6F70001 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A3B4C5E6F70002 /* ShareSheet.swift */; };
+		D1A2B3C4E5F60010 /* ReminderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F60011 /* ReminderManager.swift */; };
+		E3F4A5B6C7D80001 /* HistoryPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F4A5B6C7D80002 /* HistoryPanelView.swift */; };
+		6FF8FE81346B2D0097D1A1DF /* CleanupRuleEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8743D606D99D224554828265 /* CleanupRuleEngine.swift */; };
+		E59808C130A31EEBE08B8500 /* CleanupRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD516BD012082414CCEF32B /* CleanupRule.swift */; };
+		B9F845073BC7129EEB320D81 /* AutoCleanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1604FDCDDB3BA5308BF887 /* AutoCleanView.swift */; };
+		2264BDA48A8760C068350841 /* SimilarPhotoFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 356A3670A86EB6DD66D55666 /* SimilarPhotoFinder.swift */; };
+		B3D087504F78B1B15E8C1C1E /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551EF6FA6F045BB73C5FBE06 /* ComparisonView.swift */; };
+		2D43F9F3113439AB2B8723D3 /* StreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4CF8E50AC1C49DBF9504BB7 /* StreakManager.swift */; };
+		886215228593CA260E47D9CA /* Milestone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3AB919995218FA18E7371B /* Milestone.swift */; };
+		E64912C699914C829FBA25BB /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D02C1D052D6E7AB9E4DDAEA /* AchievementsView.swift */; };
+		EDDF22698AD3E7B2537EA8F9 /* BulkSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3444FDBEF49C03A49CBD7FE5 /* BulkSelectView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,6 +84,7 @@
 		2BD4F0ABAC8E138BE2B9692C /* SwipeClean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwipeClean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		35E01D1E83BF6D7C0029DB52 /* StorageFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageFormatter.swift; sourceTree = "<group>"; };
 		3A636727BD7512F2B965F87E /* StatsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCard.swift; sourceTree = "<group>"; };
+		C0A1B2C3D4E5F679 /* StorageBreakdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageBreakdownView.swift; sourceTree = "<group>"; };
 		49F2C26A9ECB8358D6DF9870 /* CardStackLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStackLayout.swift; sourceTree = "<group>"; };
 		51F0CA61F7FEE4D819F8DE4D /* SwipeHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeHistory.swift; sourceTree = "<group>"; };
 		55B95752284705439F1FFDC3 /* CardStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStack.swift; sourceTree = "<group>"; };
@@ -103,6 +117,18 @@
 		E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewGridView.swift; sourceTree = "<group>"; };
 		F5C59D41904470C8CD74CEC8 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F661A2608885E83B7679D15A /* SwipeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTests.swift; sourceTree = "<group>"; };
+		D2A3B4C5E6F70002 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F60011 /* ReminderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderManager.swift; sourceTree = "<group>"; };
+		E3F4A5B6C7D80002 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
+		8743D606D99D224554828265 /* CleanupRuleEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupRuleEngine.swift; sourceTree = "<group>"; };
+		EFD516BD012082414CCEF32B /* CleanupRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupRule.swift; sourceTree = "<group>"; };
+		4B1604FDCDDB3BA5308BF887 /* AutoCleanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCleanView.swift; sourceTree = "<group>"; };
+		356A3670A86EB6DD66D55666 /* SimilarPhotoFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimilarPhotoFinder.swift; sourceTree = "<group>"; };
+		551EF6FA6F045BB73C5FBE06 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
+		F4CF8E50AC1C49DBF9504BB7 /* StreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakManager.swift; sourceTree = "<group>"; };
+		5D3AB919995218FA18E7371B /* Milestone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestone.swift; sourceTree = "<group>"; };
+		9D02C1D052D6E7AB9E4DDAEA /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
+		3444FDBEF49C03A49CBD7FE5 /* BulkSelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkSelectView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -132,6 +158,8 @@
 		59F640E24A33574531F6FA26 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				EFD516BD012082414CCEF32B /* CleanupRule.swift */,
+				5D3AB919995218FA18E7371B /* Milestone.swift */,
 				947983D9B02CFFDB72D3B9EA /* AlbumSource.swift */,
 				8AC7AAB950423B6E1F9C8B98 /* AlbumSourceGrouper.swift */,
 				85E4DA81116903E76975102D /* OnboardingPage.swift */,
@@ -181,10 +209,13 @@
 		96BDDB3B28E74EE80C03AC62 /* Home */ = {
 			isa = PBXGroup;
 			children = (
+				4B1604FDCDDB3BA5308BF887 /* AutoCleanView.swift */,
+				9D02C1D052D6E7AB9E4DDAEA /* AchievementsView.swift */,
 				60D3B2A258979F64A910822A /* AlbumCard.swift */,
 				F5C59D41904470C8CD74CEC8 /* HomeView.swift */,
 				E95C8C3C9676C9ADB91F5123 /* ReviewGridView.swift */,
 				3A636727BD7512F2B965F87E /* StatsCard.swift */,
+				C0A1B2C3D4E5F679 /* StorageBreakdownView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -204,6 +235,7 @@
 				96BDDB3B28E74EE80C03AC62 /* Home */,
 				7B7794D03C908EBF52F0E5F1 /* Onboarding */,
 				94B56C27DD80A1C4AB054B99 /* Settings */,
+				D2A3B4C5E6F70002 /* ShareSheet.swift */,
 				FD09CBF22B563704791EE309 /* Swipe */,
 			);
 			path = Views;
@@ -212,11 +244,15 @@
 		D809F92E8ADD508ED25E6958 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				8743D606D99D224554828265 /* CleanupRuleEngine.swift */,
+				356A3670A86EB6DD66D55666 /* SimilarPhotoFinder.swift */,
+				F4CF8E50AC1C49DBF9504BB7 /* StreakManager.swift */,
 				8641CE9076A1B18B8CAFC78C /* AlbumProvider.swift */,
 				8820F5BBF354842CA83FCC4B /* DeleteManager.swift */,
 				C2B9081BDADB279CAB149BE3 /* PermissionManager.swift */,
 				1CD63066F10836DEF97E6A44 /* PhotoLoader.swift */,
 				0B54909C13E13BABFABD7CBF /* Protocols.swift */,
+				D1A2B3C4E5F60011 /* ReminderManager.swift */,
 				1DA576A8EE3AC232C368422A /* SessionTracker.swift */,
 			);
 			path = Core;
@@ -233,8 +269,11 @@
 		FD09CBF22B563704791EE309 /* Swipe */ = {
 			isa = PBXGroup;
 			children = (
+				551EF6FA6F045BB73C5FBE06 /* ComparisonView.swift */,
+				3444FDBEF49C03A49CBD7FE5 /* BulkSelectView.swift */,
 				55B95752284705439F1FFDC3 /* CardStack.swift */,
 				49F2C26A9ECB8358D6DF9870 /* CardStackLayout.swift */,
+				E3F4A5B6C7D80002 /* HistoryPanelView.swift */,
 				E15C5733DA2D3FCFC27B4BFF /* PhotoDetailOverlay.swift */,
 				C9F37A7A1EA6DDBBA8DC8C25 /* SessionCompleteLogic.swift */,
 				68E642A93B866E0DE7E5EE9A /* SessionCompleteView.swift */,
@@ -354,6 +393,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EDDF22698AD3E7B2537EA8F9 /* BulkSelectView.swift in Sources */,
+				E64912C699914C829FBA25BB /* AchievementsView.swift in Sources */,
+				886215228593CA260E47D9CA /* Milestone.swift in Sources */,
+				2D43F9F3113439AB2B8723D3 /* StreakManager.swift in Sources */,
+				B3D087504F78B1B15E8C1C1E /* ComparisonView.swift in Sources */,
+				2264BDA48A8760C068350841 /* SimilarPhotoFinder.swift in Sources */,
+				B9F845073BC7129EEB320D81 /* AutoCleanView.swift in Sources */,
+				E59808C130A31EEBE08B8500 /* CleanupRule.swift in Sources */,
+				6FF8FE81346B2D0097D1A1DF /* CleanupRuleEngine.swift in Sources */,
 				4D1DA8CB6B5ED6BDD744003C /* AlbumCard.swift in Sources */,
 				B646C7F6FA5F13B2B5DF5B43 /* AlbumProvider.swift in Sources */,
 				DA8FD92228C7E5BB4EDD61E1 /* AlbumSource.swift in Sources */,
@@ -376,8 +424,10 @@
 				1E11E207CFA153D1F67DCEF1 /* SessionCompleteView.swift in Sources */,
 				BF2D357702ECF8636336E104 /* SessionTracker.swift in Sources */,
 				8741D90A6BC8F5A8B1A1818A /* SettingsTypes.swift in Sources */,
+				D2A3B4C5E6F70001 /* ShareSheet.swift in Sources */,
 				092C8F21BD7C7378B104E7E8 /* SettingsView.swift in Sources */,
 				11EE6007D2237A59C45E7692 /* StatsCard.swift in Sources */,
+				C0A1B2C3D4E5F678 /* StorageBreakdownView.swift in Sources */,
 				FF531312CF9A7A9B330F765E /* StorageFormatter.swift in Sources */,
 				A5022C97FC280ED44EC28543 /* SupercutComposer.swift in Sources */,
 				72D777E6CFA6AF8C6A458959 /* SupercutPreviewView.swift in Sources */,
@@ -386,10 +436,12 @@
 				AC5CB397FFEC4693847C0CA9 /* SwipeCardView.swift in Sources */,
 				FDB9CCF8AB1A75C44E4F0CB8 /* SwipeCleanApp.swift in Sources */,
 				4435DE38FFCEC778F314816D /* SwipeFormatters.swift in Sources */,
+				E3F4A5B6C7D80001 /* HistoryPanelView.swift in Sources */,
 				FEE2957CBF7D697F133A36C7 /* SwipeGestureCalculator.swift in Sources */,
 				B5323E0147C8CD3DC4A46D5D /* SwipeHistory.swift in Sources */,
 				AA8A15B95036A54360D8BB4C /* SwipeView.swift in Sources */,
 				A1B2C3D4E5F60002 /* DeletionReviewView.swift in Sources */,
+				D1A2B3C4E5F60010 /* ReminderManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

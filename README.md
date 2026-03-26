@@ -17,17 +17,36 @@
 
 ## Features
 
+### Core
 - **Swipe to clean** — physical, Tinder-style card swiping with rotation, momentum, and haptic feedback
-- **Smart sources** — browse by All Photos, Screenshots, Videos, Selfies, Live Photos, Favorites, Recents, or any user album
-- **On This Day** — swipe through photos taken on today's date in previous years
-- **Random mode** — shuffle your entire library for serendipitous cleanup
-- **By Month** — organized monthly buckets so you can clean one month at a time
+- **Pinch-to-zoom** — zoom into photos on the card for a closer look before deciding
+- **Video support** — play button and duration badge on video cards with auto-play option
+- **Batch deletion** — nothing is deleted until you confirm. Review everything in a grid before committing
+- **Permanent delete option** — choose between Recently Deleted (30-day recovery) or permanent deletion
+
+### Smart Features
+- **Smart Cleanup** — AI-powered mode using Vision framework (sharpness, saliency, face detection) to surface low-quality photos first
+- **Similar Photos** — groups near-duplicate photos taken within seconds of each other, side-by-side comparison with quality scores
+- **Auto Clean Rules** — toggle preset rules like "screenshots older than 6 months" or "videos over 100MB" to auto-flag matching photos
+- **Bulk Select Mode** — grid view with tap-to-select for fast batch deletion, accessible via context menu on any album
+
+### Browse & Organize
+- **Smart Albums** — All Photos, Screenshots, Videos, Selfies, Live Photos, Favorites, Recents, On This Day, Random, Duplicates
+- **Monthly albums** — auto-detected months with photos, each browsable as a separate album
+- **User albums** — browse and clean any user-created photo album
+- **Storage Breakdown** — visual dashboard with ring chart showing storage usage by category
+
+### Supercut
 - **Supercut generator** — create montage videos from any time period with music and AI-scored photo selection
-- **Vision AI scoring** — Apple Vision framework analyzes sharpness, faces, and saliency to pick the best photos for supercuts
-- **Music integration** — add music from Apple Music, upload from Files, or pick free tracks from Pixabay
-- **Beat matching** — supercut transitions sync to the beat of your selected music
-- **Batch deletion** — nothing is deleted until you confirm. Undo anytime. Review before committing
-- **Session stats** — track photos reviewed, kept, deleted, and storage freed per session and lifetime
+- **Music integration** — Apple Music, local files, or free tracks from Pixabay
+- **Beat matching** — transitions sync to the beat of your selected music
+
+### Quality of Life
+- **Share Before Delete** — share button on every card so you can send a photo before swiping it away
+- **Undo History** — full history panel of every swipe decision with random-access undo on any item
+- **Cleanup Reminders** — configurable local notifications (weekly, biweekly, monthly)
+- **Streak & Gamification** — daily streaks, 12 milestones, achievements view with progress tracking
+- **Session & lifetime stats** — photos reviewed, kept, deleted, storage freed, longest streak
 - **Zero dependencies** — pure Swift, SwiftUI, PhotoKit, AVFoundation, and Vision. No third-party packages
 
 ## Getting Started
@@ -53,7 +72,8 @@ SwipeClean requires the following permissions:
 
 | Permission | Purpose |
 |---|---|
-| Photo Library (Read/Write) | Access and delete photos from your camera roll |
+| Photo Library (Full Access) | Read photos for swiping, delete photos marked for removal |
+| Notifications (optional) | Cleanup reminder notifications |
 | Apple Music (optional) | Pick songs for supercut soundtracks |
 
 ## Tech Stack
@@ -66,58 +86,55 @@ SwipeClean requires the following permissions:
 | Image Analysis | Vision (VNDetectFaceRectangles, VNGenerateAttentionBasedSaliency) |
 | Music Playback | AVKit, MediaPlayer |
 | Haptics | UIImpactFeedbackGenerator |
-| Persistence | UserDefaults |
-| Project Gen | XcodeGen |
+| Notifications | UserNotifications (UNUserNotificationCenter) |
+| Persistence | UserDefaults, AppStorage |
 
 ## Project Structure
 
 ```
-SwipeClean/
-├── Sources/SwipeClean/
-│   ├── App/
-│   │   └── SwipeCleanApp.swift
-│   ├── Models/
-│   │   ├── PhotoItem.swift
-│   │   ├── AlbumSource.swift
-│   │   ├── AlbumSourceGrouper.swift
-│   │   ├── SettingsTypes.swift
-│   │   ├── StorageFormatter.swift
-│   │   └── OnboardingPage.swift
-│   ├── Core/
-│   │   ├── PhotoLoader.swift
-│   │   ├── DeleteManager.swift
-│   │   ├── PermissionManager.swift
-│   │   ├── SessionTracker.swift
-│   │   ├── AlbumProvider.swift
-│   │   └── Protocols.swift
-│   ├── Views/
-│   │   ├── Swipe/
-│   │   │   ├── SwipeView.swift
-│   │   │   ├── SwipeCardView.swift
-│   │   │   ├── CardStack.swift
-│   │   │   ├── PhotoDetailOverlay.swift
-│   │   │   └── SessionCompleteView.swift
-│   │   ├── Home/
-│   │   │   ├── HomeView.swift
-│   │   │   ├── AlbumCard.swift
-│   │   │   ├── StatsCard.swift
-│   │   │   └── ReviewGridView.swift
-│   │   ├── Settings/
-│   │   │   └── SettingsView.swift
-│   │   └── Onboarding/
-│   │       └── OnboardingView.swift
-│   └── Supercut/
-│       ├── PhotoAnalyzer.swift
-│       ├── SupercutComposer.swift
-│       ├── MusicPicker.swift
-│       ├── SupercutSettingsView.swift
-│       ├── SupercutProgressView.swift
-│       └── SupercutPreviewView.swift
-├── Tests/SwipeCleanTests/
-│   ├── CoreTests.swift
-│   ├── SwipeTests.swift
-│   └── HomeTests.swift
-└── project.yml
+Sources/SwipeClean/
+├── App/
+│   └── SwipeCleanApp.swift              # App entry point, environment setup
+├── Core/
+│   ├── AlbumProvider.swift              # Album discovery & asset fetching
+│   ├── CleanupRuleEngine.swift          # Auto-clean rule matching engine
+│   ├── DeleteManager.swift              # Deletion queue & execution
+│   ├── PhotoLoader.swift                # Photo loading with sliding window
+│   ├── Protocols.swift                  # Shared protocols
+│   ├── ReminderManager.swift            # Local notification scheduling
+│   ├── SessionTracker.swift             # Session & lifetime statistics
+│   ├── SimilarPhotoFinder.swift         # Near-duplicate photo grouping
+│   └── StreakManager.swift              # Daily streak tracking
+├── Models/
+│   ├── AlbumSource.swift                # Album source enum (15+ sources)
+│   ├── CleanupRule.swift                # Auto-clean rule definitions
+│   ├── Milestone.swift                  # Gamification milestones & tracker
+│   ├── PhotoItem.swift                  # Photo data model
+│   └── SettingsTypes.swift              # Settings enums & keys
+├── Views/
+│   ├── Home/
+│   │   ├── AchievementsView.swift       # Milestone grid with progress
+│   │   ├── AlbumCard.swift              # Album card component
+│   │   ├── AutoCleanView.swift          # Rule-based auto-clean UI
+│   │   ├── HomeView.swift               # Main home screen
+│   │   ├── StatsCard.swift              # Lifetime stats display
+│   │   └── StorageBreakdownView.swift   # Storage usage dashboard
+│   ├── Swipe/
+│   │   ├── BulkSelectView.swift         # Grid multi-select mode
+│   │   ├── CardStack.swift              # Card stack layout
+│   │   ├── ComparisonView.swift         # Side-by-side similar photos
+│   │   ├── HistoryPanelView.swift       # Undo history sheet
+│   │   ├── SessionCompleteView.swift    # Session summary screen
+│   │   ├── SwipeCardView.swift          # Individual swipe card
+│   │   ├── SwipeHistory.swift           # Swipe decision tracking
+│   │   └── SwipeView.swift              # Main swipe interface
+│   ├── Settings/
+│   │   └── SettingsView.swift           # App settings
+│   └── ShareSheet.swift                 # UIActivityViewController wrapper
+└── Supercut/
+    ├── PhotoAnalyzer.swift              # Vision-based quality scoring
+    ├── SupercutComposer.swift           # Video montage generation
+    └── MusicPickerModel.swift           # Music selection
 ```
 
 ## License

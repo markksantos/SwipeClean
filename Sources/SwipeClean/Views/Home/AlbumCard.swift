@@ -50,7 +50,11 @@ struct AlbumCard: View {
                         .foregroundStyle(isEmpty ? .tertiary : .primary)
                         .lineLimit(1)
 
-                    if isEmpty {
+                    if photoCount == -1 {
+                        Text("AI-powered")
+                            .font(.caption)
+                            .foregroundStyle(.purple)
+                    } else if isEmpty {
                         Text("Empty")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
@@ -154,7 +158,7 @@ struct AlbumCard: View {
             options.fetchLimit = 1
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
             fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-        case .onThisDay, .random, .duplicates:
+        case .onThisDay, .random, .duplicates, .smartCleanup, .similarPhotos, .autoClean:
             let options = PHFetchOptions()
             options.fetchLimit = 1
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]

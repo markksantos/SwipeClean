@@ -4,6 +4,8 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject private var sessionTracker: SessionTracker
     @EnvironmentObject private var deleteManager: DeleteManager
+    @EnvironmentObject private var streakManager: StreakManager
+    @EnvironmentObject private var milestoneTracker: MilestoneTracker
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(SettingsKeys.sortOrder) private var sortOrder: String = PhotoSortOrder.newestFirst.rawValue
@@ -11,6 +13,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.hapticFeedback) private var hapticFeedback: Bool = true
     @AppStorage(SettingsKeys.autoPlayVideos) private var autoPlayVideos: Bool = false
     @AppStorage(SettingsKeys.cardStyle) private var cardStyle: String = CardStyle.rounded.rawValue
+    @AppStorage(SettingsKeys.permanentDelete) private var permanentDelete: Bool = false
+    @AppStorage(SettingsKeys.cleanupReminders) private var cleanupReminders: Bool = false
+    @AppStorage(SettingsKeys.reminderFrequency) private var reminderFrequency: String = ReminderFrequency.weekly.rawValue
 
     @State private var showResetConfirmation = false
     @State private var showClearQueueConfirmation = false
@@ -48,6 +53,17 @@ struct SettingsView: View {
                     Text("Behavior")
                 }
 
+                // MARK: - Deletion
+                Section {
+                    Toggle("Delete permanently", isOn: $permanentDelete)
+                } header: {
+                    Text("Deletion")
+                } footer: {
+                    Text(permanentDelete
+                         ? "Photos will be permanently deleted and cannot be recovered."
+                         : "Photos will be moved to Recently Deleted where you can recover them for 30 days.")
+                }
+
                 // MARK: - Appearance
                 Section {
                     Picker("Card style", selection: $cardStyle) {
@@ -57,6 +73,35 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Appearance")
+                }
+
+                // MARK: - Reminders
+                Section {
+                    Toggle("Cleanup Reminders", isOn: $cleanupReminders)
+                        .onChange(of: cleanupReminders) { enabled in
+                            if enabled {
+                                let freq = ReminderFrequency(rawValue: reminderFrequency) ?? .weekly
+                                ReminderManager.shared.enableReminders(frequency: freq)
+                            } else {
+                                ReminderManager.shared.disableReminders()
+                            }
+                        }
+                    if cleanupReminders {
+                        Picker("Frequency", selection: $reminderFrequency) {
+                            ForEach(ReminderFrequency.allCases) { freq in
+                                Text(freq.displayName).tag(freq.rawValue)
+                            }
+                        }
+                        .onChange(of: reminderFrequency) { newValue in
+                            if cleanupReminders, let freq = ReminderFrequency(rawValue: newValue) {
+                                ReminderManager.shared.updateFrequency(freq)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Reminders")
+                } footer: {
+                    Text("Get notified to review and clean up new photos in your library.")
                 }
 
                 // MARK: - Session History
@@ -79,6 +124,14 @@ struct SettingsView: View {
                     }
                     LabeledContent("Longest Streak") {
                         Text("\(formatNumber(sessionTracker.lifetimeStats.longestStreak)) in a row")
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Current Streak") {
+                        Text("\(formatNumber(streakManager.currentStreak)) days")
+                            .monospacedDigit()
+                    }
+                    LabeledContent("Best Streak") {
+                        Text("\(formatNumber(streakManager.bestStreak)) days")
                             .monospacedDigit()
                     }
                 } header: {
@@ -173,6 +226,8 @@ struct SettingsView: View {
         }
         // Trigger objectWillChange so the UI updates
         sessionTracker.objectWillChange.send()
+        streakManager.resetStreak()
+        milestoneTracker.resetAll()
     }
 }
 

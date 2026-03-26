@@ -3,6 +3,7 @@ import SwiftUI
 struct StatsCard: View {
     let photosDeleted: Int
     let storageFreed: Int64
+    let currentStreak: Int
 
     @State private var animatedDeletedCount: Int = 0
     @State private var animatedStorageFreed: Int64 = 0
@@ -40,6 +41,20 @@ struct StatsCard: View {
                             value: StorageFormatter.humanReadable(bytes: animatedStorageFreed),
                             label: "Storage Freed"
                         )
+                    }
+
+                    // Streak badge
+                    if currentStreak > 0 {
+                        HStack(spacing: 6) {
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(.orange)
+                            Text("\(currentStreak) day streak")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.orange.opacity(0.1))
+                        .clipShape(Capsule())
                     }
                 } else {
                     VStack(spacing: 8) {
@@ -114,11 +129,11 @@ struct StatsCard: View {
 }
 
 #Preview("With Stats") {
-    StatsCard(photosDeleted: 247, storageFreed: 4_800_000_000)
+    StatsCard(photosDeleted: 247, storageFreed: 4_800_000_000, currentStreak: 5)
         .padding()
 }
 
 #Preview("Zero State") {
-    StatsCard(photosDeleted: 0, storageFreed: 0)
+    StatsCard(photosDeleted: 0, storageFreed: 0, currentStreak: 0)
         .padding()
 }

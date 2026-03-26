@@ -14,10 +14,16 @@ enum AlbumSource: Hashable {
     case month(Int, Int) // year, month (e.g. 2024, 3 for March 2024)
     case album(PHAssetCollection)
     case duplicates
+    case smartCleanup
+    case similarPhotos
+    case autoClean
 
     /// Human-readable name for display in the source picker.
     var displayName: String {
         switch self {
+        case .smartCleanup: return "Smart Cleanup"
+        case .similarPhotos: return "Similar Photos"
+        case .autoClean: return "Auto Clean"
         case .allPhotos: return "All Photos"
         case .recents: return "Last 30 Days"
         case .screenshots: return "Screenshots"
@@ -47,6 +53,7 @@ enum AlbumSource: Hashable {
     /// Lower values appear first.
     var sortPriority: Int {
         switch self {
+        case .smartCleanup: return -1
         case .allPhotos: return 0
         case .recents: return 1
         case .screenshots: return 2
@@ -58,13 +65,16 @@ enum AlbumSource: Hashable {
         case .random: return 8
         case .month: return 9
         case .duplicates: return 10
-        case .album: return 11
+        case .similarPhotos: return 11
+        case .autoClean: return 12
+        case .album: return 13
         }
     }
 
     /// SF Symbol icon name for this source.
     var iconName: String {
         switch self {
+        case .smartCleanup: return "wand.and.stars"
         case .allPhotos: return "photo.on.rectangle.angled"
         case .recents: return "clock"
         case .screenshots: return "camera.viewfinder"
@@ -77,6 +87,8 @@ enum AlbumSource: Hashable {
         case .month: return "calendar.badge.clock"
         case .album: return "rectangle.stack"
         case .duplicates: return "plus.square.on.square"
+        case .similarPhotos: return "square.stack.3d.down.right"
+        case .autoClean: return "gearshape.2"
         }
     }
 
@@ -91,7 +103,10 @@ enum AlbumSource: Hashable {
              (.favorites, .favorites),
              (.onThisDay, .onThisDay),
              (.random, .random),
-             (.duplicates, .duplicates):
+             (.duplicates, .duplicates),
+             (.smartCleanup, .smartCleanup),
+             (.similarPhotos, .similarPhotos),
+             (.autoClean, .autoClean):
             return true
         case (.month(let y1, let m1), .month(let y2, let m2)):
             return y1 == y2 && m1 == m2
@@ -119,6 +134,9 @@ enum AlbumSource: Hashable {
             hasher.combine(month)
         case .album(let collection): hasher.combine(collection.localIdentifier)
         case .duplicates: hasher.combine("duplicates")
+        case .smartCleanup: hasher.combine("smartCleanup")
+        case .similarPhotos: hasher.combine("similarPhotos")
+        case .autoClean: hasher.combine("autoClean")
         }
     }
 }

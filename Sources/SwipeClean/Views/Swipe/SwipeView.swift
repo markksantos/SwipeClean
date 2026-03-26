@@ -5,6 +5,8 @@ struct SwipeView: View {
     @StateObject private var photoLoader = PhotoLoader()
     @EnvironmentObject var deleteManager: DeleteManager
     @EnvironmentObject var sessionTracker: SessionTracker
+    @EnvironmentObject var streakManager: StreakManager
+    @EnvironmentObject var milestoneTracker: MilestoneTracker
 
     @Environment(\.dismiss) private var dismiss
 
@@ -12,7 +14,12 @@ struct SwipeView: View {
     @State private var detailPhoto: PhotoItem?
     @State private var showSessionComplete = false
     @State private var showDoneConfirmation = false
+    @State private var showCancelAlert = false
+    @State private var showShareSheet = false
+    @State private var shareImage: UIImage?
     @State private var swipeThreshold: CGFloat = 120
+    @StateObject private var swipeHistory = SwipeHistory()
+    @State private var showHistoryPanel = false
 
     var albumName: String = "All Photos"
     var albumSource: AlbumSource = .allPhotos
@@ -57,11 +64,17 @@ struct SwipeView: View {
             SessionCompleteView()
                 .environmentObject(deleteManager)
                 .environmentObject(sessionTracker)
+                .environmentObject(streakManager)
+                .environmentObject(milestoneTracker)
         }
         .fullScreenCover(isPresented: $showDoneConfirmation) {
             DeletionReviewView()
                 .environmentObject(deleteManager)
                 .environmentObject(sessionTracker)
+        }
+        .sheet(isPresented: $showHistoryPanel) {
+            HistoryPanelView(swipeHistory: swipeHistory)
+                .environmentObject(deleteManager)
         }
         .onAppear {
             if photoLoader.totalCount == 0 {
@@ -105,16 +118,36 @@ struct SwipeView: View {
 
     private var topBar: some View {
         HStack {
-            Button {
-                if !deleteManager.trashQueue.isEmpty {
-                    showDoneConfirmation = true
-                } else {
-                    dismiss()
+            HStack(spacing: 16) {
+                Button {
+                    if !deleteManager.trashQueue.isEmpty {
+                        showCancelAlert = true
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.primary)
                 }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.primary)
+                .alert("Cancel Session?", isPresented: $showCancelAlert) {
+                    Button("Keep Reviewing", role: .cancel) { }
+                    Button("Cancel", role: .destructive) {
+                        deleteManager.clearQueue()
+                        dismiss()
+                    }
+                } message: {
+                    Text("Your \(deleteManager.trashQueue.count) selected photos won't be deleted.")
+                }
+
+                Button {
+                    showHistoryPanel = true
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .opacity(swipeHistory.canUndo ? 1 : 0.4)
             }
 
             Spacer()
@@ -162,7 +195,7 @@ struct SwipeView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.5)
-                    Text("Loading photos...")
+                    Text(albumSource == .smartCleanup ? "Analyzing your photos..." : "Loading photos...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -183,7 +216,8 @@ struct SwipeView: View {
                     onShowDetail: { photo in
                         detailPhoto = photo
                         showDetail = true
-                    }
+                    },
+                    swipeHistory: swipeHistory
                 )
                 .environmentObject(photoLoader)
                 .environmentObject(deleteManager)
@@ -227,6 +261,7 @@ struct SwipeView: View {
             // Delete button
             Button {
                 if let photo = photoLoader.currentPhoto {
+                    swipeHistory.push(action: .deleted, photoId: photo.id, photo: photo)
                     deleteManager.markForDeletion(photo)
                     sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
                     photoLoader.advance()
@@ -241,26 +276,49 @@ struct SwipeView: View {
                     .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
             }
 
-            // Undo button (only visible when available)
-            Button {
-                // Undo handled through CardStack — need shared state
-                _ = deleteManager.undoLast()
-                photoLoader.goBack()
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 44, height: 44)
-                    .background(Color(.systemGray5))
-                    .clipShape(Circle())
+            // Center stack: undo on top, share below
+            VStack(spacing: 8) {
+                // Undo button (only visible when available)
+                Button {
+                    guard let entry = swipeHistory.undo() else { return }
+                    photoLoader.goBack()
+                    if entry.action == .deleted {
+                        _ = deleteManager.undoLast()
+                    }
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemGray5))
+                        .clipShape(Circle())
+                }
+                .opacity(swipeHistory.canUndo ? 1 : 0)
+                .disabled(!swipeHistory.canUndo)
+                .animation(.easeInOut(duration: 0.2), value: swipeHistory.canUndo)
+
+                // Share button (only visible when there's a current photo)
+                Button {
+                    if let photo = photoLoader.currentPhoto {
+                        shareImage = photo.fullImage ?? photo.thumbnail
+                        showShareSheet = true
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 36, height: 36)
+                        .background(Color(.systemGray5))
+                        .clipShape(Circle())
+                }
+                .opacity(photoLoader.currentPhoto != nil ? 1 : 0)
+                .disabled(photoLoader.currentPhoto == nil)
             }
-            .opacity(deleteManager.canUndo ? 1 : 0)
-            .disabled(!deleteManager.canUndo)
-            .animation(.easeInOut(duration: 0.2), value: deleteManager.canUndo)
 
             // Keep button
             Button {
                 if let photo = photoLoader.currentPhoto {
+                    swipeHistory.push(action: .kept, photoId: photo.id, photo: photo)
                     sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
                 }
                 photoLoader.advance()
@@ -272,6 +330,11 @@ struct SwipeView: View {
                     .background(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let image = shareImage {
+                ShareSheet(activityItems: [image])
             }
         }
     }

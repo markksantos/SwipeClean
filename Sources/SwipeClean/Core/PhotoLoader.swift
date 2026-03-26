@@ -65,6 +65,21 @@ final class PhotoLoader: ObservableObject {
     /// Fetches photos from the given album source and loads them.
     func loadSource(_ source: AlbumSource, sortOrder: SortOrder = .newestFirst) {
         isLoading = true
+
+        if source == .smartCleanup {
+            loadSmartCleanup()
+            return
+        }
+
+        if source == .autoClean {
+            // Load pre-filtered assets from the shared store (populated by AutoCleanView).
+            let assets = AutoCleanAssetStore.shared.assets
+            let items = assets.map { PhotoItem(asset: $0) }
+            loadItems(items)
+            isLoading = false
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             let assets = self.assetFetcher.fetchAssets(for: source, sortOrder: sortOrder)
@@ -74,6 +89,33 @@ final class PhotoLoader: ObservableObject {
             }
             DispatchQueue.main.async {
                 self.loadItems(items)
+                self.isLoading = false
+            }
+        }
+    }
+
+    /// Fetches all photos, analyzes them with Vision, and loads only low-quality ones.
+    private func loadSmartCleanup() {
+        Task {
+            let assets = await Task.detached { [assetFetcher] in
+                assetFetcher.fetchAssets(for: .allPhotos, sortOrder: .newestFirst)
+            }.value
+
+            // Cap at 5000 most recent to keep analysis time reasonable
+            let capped = Array(assets.prefix(5000))
+            let items = capped.map { PhotoItem(asset: $0) }
+
+            let analyzer = PhotoAnalyzer()
+            let scores = await analyzer.analyzeAndRank(items) { _ in }
+
+            // Filter to low-quality (< 0.35) and sort worst-first
+            let lowQuality = scores
+                .filter { $0.qualityScore < 0.35 }
+                .sorted { $0.qualityScore < $1.qualityScore }
+                .map { $0.item }
+
+            await MainActor.run {
+                self.loadItems(lowQuality)
                 self.isLoading = false
             }
         }

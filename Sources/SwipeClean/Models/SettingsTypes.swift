@@ -64,6 +64,33 @@ enum CardStyle: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Reminder Frequency
+
+enum ReminderFrequency: String, CaseIterable, Identifiable {
+    case weekly
+    case biweekly
+    case monthly
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .weekly: return "Weekly"
+        case .biweekly: return "Every 2 Weeks"
+        case .monthly: return "Monthly"
+        }
+    }
+
+    /// Calendar interval in days used to compute the next trigger date.
+    var intervalDays: Int {
+        switch self {
+        case .weekly: return 7
+        case .biweekly: return 14
+        case .monthly: return 30
+        }
+    }
+}
+
 // MARK: - Settings Keys
 
 enum SettingsKeys {
@@ -72,4 +99,7 @@ enum SettingsKeys {
     static let hapticFeedback = "settings_haptic_feedback"
     static let autoPlayVideos = "settings_auto_play_videos"
     static let cardStyle = "settings_card_style"
+    static let permanentDelete = "settings_permanent_delete"
+    static let cleanupReminders = "settings_cleanup_reminders"
+    static let reminderFrequency = "settings_reminder_frequency"
 }

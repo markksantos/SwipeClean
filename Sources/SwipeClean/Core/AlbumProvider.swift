@@ -84,6 +84,21 @@ final class LiveAssetFetcher: AssetFetching {
             // Fetch all photos and group by burst identifier for basic duplicate detection.
             options.predicate = NSPredicate(format: "burstIdentifier != nil")
             fetchResult = PHAsset.fetchAssets(with: options)
+
+        case .smartCleanup:
+            // Fetch all assets — filtering by quality happens in PhotoLoader.
+            fetchResult = PHAsset.fetchAssets(with: options)
+
+        case .similarPhotos:
+            // Similar photos uses all photos sorted by date; grouping happens in SimilarPhotoFinder.
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+            fetchResult = PHAsset.fetchAssets(with: options)
+
+        case .autoClean:
+            // Auto Clean loads assets via CleanupRuleEngine, not through this fetcher.
+            let emptyOpts = PHFetchOptions()
+            emptyOpts.fetchLimit = 0
+            fetchResult = PHAsset.fetchAssets(with: emptyOpts)
         }
 
         var assets: [PHAsset] = []
@@ -99,6 +114,7 @@ final class LiveAssetFetcher: AssetFetching {
 
         // Smart albums in display order
         let smartSources: [(AlbumSource, PHAssetCollectionSubtype?)] = [
+            (.smartCleanup, nil),
             (.allPhotos, nil),
             (.recents, nil),
             (.screenshots, .smartAlbumScreenshots),
@@ -109,6 +125,8 @@ final class LiveAssetFetcher: AssetFetching {
             (.onThisDay, nil),
             (.random, nil),
             (.duplicates, nil),
+            (.similarPhotos, nil),
+            (.autoClean, nil),
         ]
 
         for (source, subtype) in smartSources {
@@ -153,6 +171,8 @@ final class LiveAssetFetcher: AssetFetching {
                 }
             case .random:
                 count = PHAsset.fetchAssets(with: nil).count
+            case .smartCleanup, .similarPhotos, .autoClean:
+                count = -1 // Unknown until analyzed
             case .duplicates:
                 let opts = PHFetchOptions()
                 opts.predicate = NSPredicate(format: "burstIdentifier != nil")
@@ -172,7 +192,7 @@ final class LiveAssetFetcher: AssetFetching {
                 }
             }
 
-            if count > 0 {
+            if count > 0 || count == -1 {
                 results.append(AlbumSourceInfo(source: source, count: count))
             }
         }

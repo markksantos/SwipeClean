@@ -5,6 +5,8 @@ import Photos
 struct SessionCompleteView: View {
     @EnvironmentObject var deleteManager: DeleteManager
     @EnvironmentObject var sessionTracker: SessionTracker
+    @EnvironmentObject var streakManager: StreakManager
+    @EnvironmentObject var milestoneTracker: MilestoneTracker
 
     @Environment(\.dismiss) private var dismiss
 
@@ -14,6 +16,8 @@ struct SessionCompleteView: View {
     @State private var animateStats = false
     @State private var confettiParticles: [ConfettiParticle] = []
     @State private var showConfetti = false
+    @State private var earnedMilestones: [Milestone] = []
+    @State private var showMilestoneCelebration = false
 
     private var shouldShowConfetti: Bool {
         SessionCompleteLogic.shouldShowConfetti(storageFreed: sessionTracker.sessionStats.storageFreed)
@@ -34,6 +38,11 @@ struct SessionCompleteView: View {
 
                         // Stats row
                         statsRow
+
+                        // Milestone celebration
+                        if showMilestoneCelebration && !earnedMilestones.isEmpty {
+                            milestoneCelebrationBanner
+                        }
 
                         // Storage freed
                         storageFreedDisplay
@@ -67,8 +76,27 @@ struct SessionCompleteView: View {
             }
             .onAppear {
                 sessionTracker.endSession()
+                streakManager.recordSession()
+
+                // Check for new milestones
+                let stats = sessionTracker.lifetimeStats
+                earnedMilestones = milestoneTracker.checkAndAward(
+                    photosReviewed: stats.totalPhotosReviewed,
+                    storageFreed: stats.totalStorageFreed,
+                    currentStreak: streakManager.currentStreak
+                )
+
                 withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
                     animateStats = true
+                }
+                if !earnedMilestones.isEmpty {
+                    withAnimation(.easeOut(duration: 0.5).delay(0.8)) {
+                        showMilestoneCelebration = true
+                    }
+                    // Also trigger confetti for milestone celebration
+                    if !shouldShowConfetti {
+                        startConfetti()
+                    }
                 }
                 if shouldShowConfetti {
                     startConfetti()
@@ -172,6 +200,44 @@ struct SessionCompleteView: View {
             }
             .disabled(isDeleting || deleteComplete)
         }
+    }
+
+    // MARK: - Milestone Celebration
+
+    private var milestoneCelebrationBanner: some View {
+        VStack(spacing: 12) {
+            ForEach(earnedMilestones) { milestone in
+                HStack(spacing: 12) {
+                    Image(systemName: milestone.icon)
+                        .font(.title2)
+                        .foregroundStyle(.yellow)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Milestone Earned!")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(milestone.title)
+                            .font(.headline)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(
+                    LinearGradient(
+                        colors: [Color.yellow.opacity(0.12), Color.orange.opacity(0.08)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.yellow.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+        .transition(.scale.combined(with: .opacity))
     }
 
     // MARK: - Confetti

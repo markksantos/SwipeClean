@@ -295,10 +295,22 @@ final class SwipeFormattingTests: XCTestCase {
 
 final class SwipeUndoTests: XCTestCase {
 
+    private func makeTestPhoto(id: String) -> PhotoItem {
+        PhotoItem(
+            id: id,
+            asset: nil,
+            creationDate: nil,
+            mediaType: .image,
+            fileSize: 1024,
+            duration: nil,
+            isFavorited: false
+        )
+    }
+
     func testUndoShouldRestorePreviousCard() {
-        var history = SwipeHistory()
-        history.push(action: .deleted, photoId: "photo-1")
-        history.push(action: .kept, photoId: "photo-2")
+        let history = SwipeHistory()
+        history.push(action: .deleted, photoId: "photo-1", photo: makeTestPhoto(id: "photo-1"))
+        history.push(action: .kept, photoId: "photo-2", photo: makeTestPhoto(id: "photo-2"))
 
         let undone = history.undo()
         XCTAssertNotNil(undone)
@@ -307,7 +319,7 @@ final class SwipeUndoTests: XCTestCase {
     }
 
     func testUndoOnEmptyHistoryReturnsNil() {
-        var history = SwipeHistory()
+        let history = SwipeHistory()
         let undone = history.undo()
         XCTAssertNil(undone)
     }
@@ -318,21 +330,33 @@ final class SwipeUndoTests: XCTestCase {
     }
 
     func testCanUndoReturnsTrueWithHistory() {
-        var history = SwipeHistory()
-        history.push(action: .deleted, photoId: "photo-1")
+        let history = SwipeHistory()
+        history.push(action: .deleted, photoId: "photo-1", photo: makeTestPhoto(id: "photo-1"))
         XCTAssertTrue(history.canUndo)
     }
 
     func testMultipleUndosWorkInOrder() {
-        var history = SwipeHistory()
-        history.push(action: .deleted, photoId: "photo-1")
-        history.push(action: .kept, photoId: "photo-2")
-        history.push(action: .deleted, photoId: "photo-3")
+        let history = SwipeHistory()
+        history.push(action: .deleted, photoId: "photo-1", photo: makeTestPhoto(id: "photo-1"))
+        history.push(action: .kept, photoId: "photo-2", photo: makeTestPhoto(id: "photo-2"))
+        history.push(action: .deleted, photoId: "photo-3", photo: makeTestPhoto(id: "photo-3"))
 
         XCTAssertEqual(history.undo()?.photoId, "photo-3")
         XCTAssertEqual(history.undo()?.photoId, "photo-2")
         XCTAssertEqual(history.undo()?.photoId, "photo-1")
         XCTAssertNil(history.undo())
+    }
+
+    func testToggleActionReversesDecision() {
+        let history = SwipeHistory()
+        history.push(action: .deleted, photoId: "photo-1", photo: makeTestPhoto(id: "photo-1"))
+        let entryId = history.entries.first!.id
+
+        let toggled = history.toggleAction(for: entryId)
+        XCTAssertEqual(toggled?.action, .kept)
+
+        let toggledBack = history.toggleAction(for: entryId)
+        XCTAssertEqual(toggledBack?.action, .deleted)
     }
 }
 

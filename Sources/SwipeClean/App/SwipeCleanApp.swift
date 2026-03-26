@@ -6,6 +6,8 @@ struct SwipeCleanApp: App {
     @StateObject private var sessionTracker = SessionTracker()
     @StateObject private var albumProvider = AlbumProvider()
     @StateObject private var deleteManager = DeleteManager()
+    @StateObject private var streakManager = StreakManager()
+    @StateObject private var milestoneTracker = MilestoneTracker()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     var body: some Scene {
@@ -19,6 +21,8 @@ struct SwipeCleanApp: App {
                     .environmentObject(sessionTracker)
                     .environmentObject(albumProvider)
                     .environmentObject(deleteManager)
+                    .environmentObject(streakManager)
+                    .environmentObject(milestoneTracker)
             }
         }
     }

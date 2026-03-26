@@ -10,7 +10,7 @@ struct CardStack: View {
     let swipeThreshold: CGFloat
     let onShowDetail: (PhotoItem) -> Void
 
-    @State private var swipeHistory = SwipeHistory()
+    @ObservedObject var swipeHistory: SwipeHistory
 
     var body: some View {
         let visiblePhotos = buildVisiblePhotos()
@@ -31,11 +31,8 @@ struct CardStack: View {
                         onLongPress: { onShowDetail(photo) }
                     )
                     .zIndex(Double(CardStackLayout.maxVisibleCards - stackIndex))
-                } else {
-                    // Back cards: non-interactive, scaled and offset
-                    backCard(photo: photo, stackIndex: stackIndex)
-                        .zIndex(Double(CardStackLayout.maxVisibleCards - stackIndex))
                 }
+                // Back cards hidden — only preload them for smooth transitions
             }
         }
     }
@@ -88,12 +85,12 @@ struct CardStack: View {
         switch direction {
         case .right:
             // Keep: just advance
-            swipeHistory.push(action: .kept, photoId: photo.id)
+            swipeHistory.push(action: .kept, photoId: photo.id, photo: photo)
             sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
             photoLoader.advance()
         case .left:
             // Delete: mark for deletion, then advance
-            swipeHistory.push(action: .deleted, photoId: photo.id)
+            swipeHistory.push(action: .deleted, photoId: photo.id, photo: photo)
             deleteManager.markForDeletion(photo)
             sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
             photoLoader.advance()

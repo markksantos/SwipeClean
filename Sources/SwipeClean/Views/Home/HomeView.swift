@@ -5,12 +5,16 @@ struct HomeView: View {
     @EnvironmentObject private var albumProvider: AlbumProvider
     @EnvironmentObject private var sessionTracker: SessionTracker
     @EnvironmentObject private var deleteManager: DeleteManager
+    @EnvironmentObject private var streakManager: StreakManager
+    @EnvironmentObject private var milestoneTracker: MilestoneTracker
 
     @State private var showSettings = false
+    @State private var showAchievements = false
     @State private var navigationPath = NavigationPath()
     @State private var cardsVisible = false
     @State private var animateGradient = false
     @State private var supercutTarget: SupercutNavItem?
+    @State private var bulkSelectTarget: BulkSelectNavItem?
 
     private var grouped: (smart: [AlbumSourceInfo], months: [AlbumSourceInfo], user: [AlbumSourceInfo]) {
         var smart: [AlbumSourceInfo] = []
@@ -64,8 +68,70 @@ struct HomeView: View {
                     // Hero stats card
                     StatsCard(
                         photosDeleted: sessionTracker.lifetimeStats.totalDeleted,
-                        storageFreed: sessionTracker.lifetimeStats.totalStorageFreed
+                        storageFreed: sessionTracker.lifetimeStats.totalStorageFreed,
+                        currentStreak: streakManager.currentStreak
                     )
+
+                    // Storage breakdown card
+                    NavigationLink(destination: StorageBreakdownView()) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.title2)
+                                .foregroundStyle(.blue)
+                                .frame(width: 40, height: 40)
+                                .background(Color.blue.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Storage Breakdown")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("See where your space is going")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(PressDownButtonStyle())
+
+                    // Achievements card
+                    Button {
+                        showAchievements = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "trophy.fill")
+                                .foregroundStyle(.yellow)
+                            if let latest = milestoneTracker.lastEarned {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Achievements")
+                                        .font(.subheadline.weight(.medium))
+                                    Text("Latest: \(latest.title)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text("Achievements")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(14)
+                        .background(Color.yellow.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(PressDownButtonStyle())
 
                     // Pending deletions shortcut
                     if !deleteManager.trashQueue.isEmpty {
@@ -108,6 +174,11 @@ struct HomeView: View {
                                 }
                                 .contextMenu {
                                     Button {
+                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
+                                    } label: {
+                                        Label("Bulk Select", systemImage: "checkmark.circle")
+                                    }
+                                    Button {
                                         supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
                                     } label: {
                                         Label("Create Supercut", systemImage: "film")
@@ -136,6 +207,11 @@ struct HomeView: View {
                                 }
                                 .contextMenu {
                                     Button {
+                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
+                                    } label: {
+                                        Label("Bulk Select", systemImage: "checkmark.circle")
+                                    }
+                                    Button {
                                         supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
                                     } label: {
                                         Label("Create Supercut", systemImage: "film")
@@ -163,6 +239,11 @@ struct HomeView: View {
                                     navigationPath.append(info)
                                 }
                                 .contextMenu {
+                                    Button {
+                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
+                                    } label: {
+                                        Label("Bulk Select", systemImage: "checkmark.circle")
+                                    }
                                     Button {
                                         supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
                                     } label: {
@@ -200,11 +281,35 @@ struct HomeView: View {
                 SettingsView()
                     .environmentObject(sessionTracker)
                     .environmentObject(deleteManager)
+                    .environmentObject(streakManager)
+                    .environmentObject(milestoneTracker)
+            }
+            .sheet(isPresented: $showAchievements) {
+                AchievementsView()
+                    .environmentObject(milestoneTracker)
+                    .environmentObject(sessionTracker)
+                    .environmentObject(streakManager)
             }
             .navigationDestination(for: AlbumSourceInfo.self) { info in
-                SwipeView(albumName: info.source.displayName, albumSource: info.source)
+                if info.source == .similarPhotos {
+                    SimilarPhotosLoadingView()
+                        .environmentObject(deleteManager)
+                        .environmentObject(sessionTracker)
+                } else if info.source == .autoClean {
+                    AutoCleanView()
+                        .environmentObject(deleteManager)
+                        .environmentObject(sessionTracker)
+                } else {
+                    SwipeView(albumName: info.source.displayName, albumSource: info.source)
+                        .environmentObject(deleteManager)
+                        .environmentObject(sessionTracker)
+                        .environmentObject(streakManager)
+                        .environmentObject(milestoneTracker)
+                }
+            }
+            .navigationDestination(for: BulkSelectNavItem.self) { item in
+                BulkSelectView(albumSource: item.albumSource, albumName: item.albumName)
                     .environmentObject(deleteManager)
-                    .environmentObject(sessionTracker)
             }
             .navigationDestination(for: SupercutNavItem.self) { item in
                 SupercutSettingsView(albumSource: item.albumSource, photoCount: item.photoCount)
@@ -213,6 +318,12 @@ struct HomeView: View {
                 if let target = newValue {
                     navigationPath.append(target)
                     supercutTarget = nil
+                }
+            }
+            .onChange(of: bulkSelectTarget) { newValue in
+                if let target = newValue {
+                    navigationPath.append(target)
+                    bulkSelectTarget = nil
                 }
             }
         }
