@@ -20,3 +20,9 @@ Packages/
 .DS_Store
 *.swp
 *~
+
+
+# Environment
+.env
+.env.local
+.env.*.local
