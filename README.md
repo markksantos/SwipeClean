@@ -99,43 +99,76 @@ Sources/SwipeClean/
 │   ├── AlbumProvider.swift              # Album discovery & asset fetching
 │   ├── CleanupRuleEngine.swift          # Auto-clean rule matching engine
 │   ├── DeleteManager.swift              # Deletion queue & execution
+│   ├── PermissionManager.swift          # Photo library authorization
 │   ├── PhotoLoader.swift                # Photo loading with sliding window
-│   ├── Protocols.swift                  # Shared protocols
+│   ├── Protocols.swift                  # Shared protocols (testability seams)
 │   ├── ReminderManager.swift            # Local notification scheduling
 │   ├── SessionTracker.swift             # Session & lifetime statistics
 │   ├── SimilarPhotoFinder.swift         # Near-duplicate photo grouping
 │   └── StreakManager.swift              # Daily streak tracking
 ├── Models/
 │   ├── AlbumSource.swift                # Album source enum (15+ sources)
+│   ├── AlbumSourceGrouper.swift         # Groups sources into home sections
 │   ├── CleanupRule.swift                # Auto-clean rule definitions
 │   ├── Milestone.swift                  # Gamification milestones & tracker
+│   ├── OnboardingPage.swift             # Onboarding page model
 │   ├── PhotoItem.swift                  # Photo data model
-│   └── SettingsTypes.swift              # Settings enums & keys
+│   ├── SettingsTypes.swift              # Settings enums & keys
+│   └── StorageFormatter.swift           # Byte formatting helper
+├── Resources/
+│   └── Assets.xcassets/                 # App icon + colors
 ├── Views/
 │   ├── Home/
 │   │   ├── AchievementsView.swift       # Milestone grid with progress
 │   │   ├── AlbumCard.swift              # Album card component
 │   │   ├── AutoCleanView.swift          # Rule-based auto-clean UI
 │   │   ├── HomeView.swift               # Main home screen
+│   │   ├── ReviewGridView.swift         # Pre-delete review grid
 │   │   ├── StatsCard.swift              # Lifetime stats display
 │   │   └── StorageBreakdownView.swift   # Storage usage dashboard
+│   ├── Onboarding/
+│   │   └── OnboardingView.swift         # 3-page animated onboarding
 │   ├── Swipe/
 │   │   ├── BulkSelectView.swift         # Grid multi-select mode
-│   │   ├── CardStack.swift              # Card stack layout
+│   │   ├── CardStack.swift              # Card stack container
+│   │   ├── CardStackLayout.swift        # Pure layout math (tested)
 │   │   ├── ComparisonView.swift         # Side-by-side similar photos
+│   │   ├── DeletionReviewView.swift     # Final deletion confirmation
 │   │   ├── HistoryPanelView.swift       # Undo history sheet
+│   │   ├── PhotoDetailOverlay.swift     # Zoom / video / Live Photo viewer
+│   │   ├── SessionCompleteLogic.swift   # Session summary logic (tested)
 │   │   ├── SessionCompleteView.swift    # Session summary screen
 │   │   ├── SwipeCardView.swift          # Individual swipe card
+│   │   ├── SwipeFormatters.swift        # File-size / duration formatting
+│   │   ├── SwipeGestureCalculator.swift # Pure swipe-physics math (tested)
 │   │   ├── SwipeHistory.swift           # Swipe decision tracking
 │   │   └── SwipeView.swift              # Main swipe interface
 │   ├── Settings/
 │   │   └── SettingsView.swift           # App settings
 │   └── ShareSheet.swift                 # UIActivityViewController wrapper
 └── Supercut/
+    ├── MusicPicker.swift                # Music selection (Apple Music / Files / Pixabay)
     ├── PhotoAnalyzer.swift              # Vision-based quality scoring
-    ├── SupercutComposer.swift           # Video montage generation
-    └── MusicPickerModel.swift           # Music selection
+    ├── SupercutComposer.swift           # AVFoundation video montage generation
+    ├── SupercutPreviewView.swift        # Preview / save / share the result
+    ├── SupercutProgressView.swift       # Generation progress ring
+    └── SupercutSettingsView.swift       # Cut speed / length / music + Generate
 ```
+
+## Configuration
+
+The only optional external dependency is the **Pixabay** free-music library used
+by the Supercut "Free Library" tab. It is wired through a gitignored xcconfig so
+no key ever lands in source control:
+
+```bash
+cp Secrets.example.xcconfig Secrets.xcconfig
+# then set PIXABAY_API_KEY=<your key> in Secrets.xcconfig
+```
+
+Get a free key at <https://pixabay.com/api/docs/>. If no key is configured, the
+Free Library tab degrades gracefully and users can still pick music from Apple
+Music or the Files app — the rest of the app is fully functional without it.
 
 ## License
 

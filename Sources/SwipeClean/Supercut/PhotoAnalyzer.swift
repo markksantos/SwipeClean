@@ -220,7 +220,7 @@ final class PhotoAnalyzer {
     /// 4. Normalize to 0-1 (clamped; empirical max around 2500).
     private func computeSharpness(of cgImage: CGImage) -> Float {
         let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-        var ciImage = CIImage(cgImage: cgImage)
+        let ciImage = CIImage(cgImage: cgImage)
 
         // Convert to grayscale.
         guard let monoFilter = CIFilter(name: "CIColorControls") else { return 0 }

@@ -2,6 +2,7 @@ import Photos
 import Combine
 
 /// Manages the deletion queue: collects swiped-left photos and batch-deletes at session end.
+@MainActor
 final class DeleteManager: ObservableObject {
 
     // MARK: - Public State
@@ -98,52 +99,71 @@ final class DeleteManager: ObservableObject {
             return
         }
 
-        // Collect asset identifiers. Filter out nil assets (test items without real assets).
+        // Collect the real PHAssets. Items without an asset (e.g. test stubs)
+        // contribute nothing to the change request but are still cleared from
+        // the queue on success.
         let assets = itemsToDelete.compactMap { $0.asset }
         let count = itemsToDelete.count
 
-        if assets.isEmpty {
-            // All items were test stubs without real assets — simulate success.
-            trashQueue.removeAll()
-            completion(.success(count))
-            return
-        }
-
         let permanentDelete = UserDefaults.standard.bool(forKey: SettingsKeys.permanentDelete)
 
+        let assetIDs = assets.map { $0.localIdentifier }
+
         photoLibrary.performChanges({
+            // Only issue the delete request when there are real assets. An empty
+            // request would throw inside PhotoKit's change block.
+            guard !assets.isEmpty else { return }
             PHAssetChangeRequest.deleteAssets(assets as NSFastEnumeration)
         }, completionHandler: { [weak self] success, error in
-            if success && permanentDelete {
-                // Fetch from Recently Deleted and delete again for permanent removal
-                let assetIDs = assets.compactMap { ($0 as? PHAsset)?.localIdentifier }
-                self?.permanentlyDelete(assetIDs: assetIDs) { permResult in
-                    DispatchQueue.main.async {
-                        self?.trashQueue.removeAll()
-                        // Report success regardless — initial delete succeeded
-                        completion(.success(count))
-                    }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    if success {
-                        self?.trashQueue.removeAll()
-                        completion(.success(count))
-                    } else {
-                        let deleteError = error ?? NSError(
-                            domain: "SwipeClean.DeleteManager",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "Deletion was denied by the user."]
-                        )
-                        completion(.failure(deleteError))
-                    }
-                }
+            // PhotoKit calls back on a private queue; hop to the main actor
+            // before touching any @Published state.
+            Task { @MainActor [weak self] in
+                self?.finishDeletion(
+                    success: success,
+                    error: error,
+                    count: count,
+                    permanentDelete: permanentDelete,
+                    assetIDs: assetIDs,
+                    completion: completion
+                )
             }
         })
     }
 
+    /// Main-actor continuation of `executeQueuedDeletions` once the library
+    /// reports the result of the change request.
+    private func finishDeletion(
+        success: Bool,
+        error: (any Error)?,
+        count: Int,
+        permanentDelete: Bool,
+        assetIDs: [String],
+        completion: @escaping (Result<Int, Error>) -> Void
+    ) {
+        if success && permanentDelete {
+            permanentlyDelete(assetIDs: assetIDs) { [weak self] _ in
+                Task { @MainActor in
+                    self?.trashQueue.removeAll()
+                    // Report success regardless — the initial delete succeeded.
+                    completion(.success(count))
+                }
+            }
+        } else if success {
+            trashQueue.removeAll()
+            completion(.success(count))
+        } else {
+            let deleteError = error ?? NSError(
+                domain: "SwipeClean.DeleteManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Deletion was denied by the user."]
+            )
+            completion(.failure(deleteError))
+        }
+    }
+
     /// Permanently deletes assets that are already in Recently Deleted.
-    private func permanentlyDelete(assetIDs: [String], completion: @escaping (Bool) -> Void) {
+    /// The completion handler may be invoked on a background queue.
+    private func permanentlyDelete(assetIDs: [String], completion: @escaping @Sendable (Bool) -> Void) {
         guard !assetIDs.isEmpty else {
             completion(true)
             return
@@ -153,10 +173,11 @@ final class DeleteManager: ObservableObject {
             completion(true)
             return
         }
-        var assetsToDelete: [PHAsset] = []
+        var collected: [PHAsset] = []
         fetchResult.enumerateObjects { asset, _, _ in
-            assetsToDelete.append(asset)
+            collected.append(asset)
         }
+        let assetsToDelete = collected
         photoLibrary.performChanges({
             PHAssetChangeRequest.deleteAssets(assetsToDelete as NSFastEnumeration)
         }, completionHandler: { success, _ in

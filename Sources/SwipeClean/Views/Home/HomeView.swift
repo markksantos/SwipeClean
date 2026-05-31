@@ -331,14 +331,9 @@ struct HomeView: View {
             // Re-read lifetime stats after returning from a swipe session
             sessionTracker.objectWillChange.send()
 
-            // Fetch sources on a background thread to avoid blocking UI
-            Task.detached {
-                let sources = albumProvider.fetchAvailableSources()
-                await MainActor.run {
-                    _ = sources // sources already set inside fetchAvailableSources
-                    cardsVisible = true
-                }
-            }
+            // Fetch sources on a background queue (publishes on main internally)
+            albumProvider.fetchAvailableSourcesAsync()
+            withAnimation { cardsVisible = true }
         }
     }
 

@@ -26,3 +26,16 @@ Packages/
 .env
 .env.local
 .env.*.local
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Secrets (xcconfig holding API keys) — keep the example, ignore the real one
+Secrets.xcconfig
+
+# Test/build output
+/tmp/
+*.xcresult

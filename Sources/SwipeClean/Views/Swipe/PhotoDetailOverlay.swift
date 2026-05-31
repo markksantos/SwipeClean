@@ -54,6 +54,28 @@ struct PhotoDetailOverlay: View {
                         .foregroundStyle(.white, .black.opacity(0.4))
                 }
             }
+
+            // Live Photo hint badge
+            if photo.mediaType == .livePhoto {
+                VStack {
+                    HStack {
+                        Label("LIVE", systemImage: "livephoto")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(.leading, 16)
+                            .padding(.top, 16)
+                        Spacer()
+                    }
+                    Spacer()
+                    Text("Touch and hold to play")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.bottom, 24)
+                }
+            }
         }
         .statusBarHidden(true)
         .sheet(isPresented: $showVideoPlayer) {
@@ -70,7 +92,15 @@ struct PhotoDetailOverlay: View {
 
     @ViewBuilder
     private var photoContent: some View {
-        if let image = photo.fullImage ?? photo.thumbnail {
+        if photo.mediaType == .livePhoto, let asset = photo.asset {
+            // Live Photos play their motion when long-pressed (native gesture).
+            LivePhotoPlayer(asset: asset, fallback: photo.fullImage ?? photo.thumbnail)
+                .aspectRatio(contentMode: .fit)
+                .scaleEffect(scale)
+                .offset(panOffset)
+                .gesture(zoomGesture)
+                .simultaneousGesture(panGesture)
+        } else if let image = photo.fullImage ?? photo.thumbnail {
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -135,6 +165,46 @@ struct PhotoDetailOverlay: View {
                     }
                 }
             }
+    }
+}
+
+// MARK: - Live Photo Player
+
+/// Wraps `PHLivePhotoView` so SwiftUI can display a Live Photo. The user can
+/// long-press to play the motion, matching the native Photos app behaviour.
+struct LivePhotoPlayer: UIViewRepresentable {
+    let asset: PHAsset
+    let fallback: UIImage?
+
+    func makeUIView(context: Context) -> PHLivePhotoView {
+        let view = PHLivePhotoView()
+        view.contentMode = .scaleAspectFit
+        view.clipsToBounds = true
+        return view
+    }
+
+    func updateUIView(_ uiView: PHLivePhotoView, context: Context) {
+        // Avoid re-requesting if we already have a Live Photo loaded.
+        guard uiView.livePhoto == nil else { return }
+
+        let targetSize = CGSize(width: 1080, height: 1920)
+        let options = PHLivePhotoRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+
+        PHImageManager.default().requestLivePhoto(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            options: options
+        ) { livePhoto, info in
+            guard let livePhoto else { return }
+            // Ignore degraded intermediate results.
+            if let degraded = info?[PHImageResultIsDegradedKey] as? Bool, degraded { return }
+            DispatchQueue.main.async {
+                uiView.livePhoto = livePhoto
+            }
+        }
     }
 }
 

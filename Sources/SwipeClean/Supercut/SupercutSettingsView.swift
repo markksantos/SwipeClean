@@ -1,7 +1,23 @@
 import SwiftUI
 import Photos
+import UIKit
 
 // CutSpeed is defined in SupercutComposer.swift
+
+// MARK: - SupercutPhase
+
+/// The stage of the supercut generation flow currently shown to the user.
+private enum SupercutPhase: Identifiable {
+    case generating
+    case preview(URL)
+
+    var id: String {
+        switch self {
+        case .generating: return "generating"
+        case .preview(let url): return "preview-\(url.absoluteString)"
+        }
+    }
+}
 
 // MARK: - MaxDuration
 
@@ -42,7 +58,14 @@ struct SupercutSettingsView: View {
     @State private var maxDuration: MaxDuration = .sixtySeconds
     @State private var showMusicPicker = false
     @StateObject private var musicModel = MusicPickerModel()
+    @StateObject private var composer = SupercutComposer()
     @State private var isGenerating = false
+    @State private var phase: SupercutPhase?
+    @State private var generationTask: Task<Void, Never>?
+
+    /// Maximum number of photos pulled into a supercut. Keeps Vision analysis
+    /// and frame rendering within a reasonable time/memory budget.
+    private static let maxPhotos = 200
 
     var body: some View {
         Form {
@@ -152,15 +175,146 @@ struct SupercutSettingsView: View {
         .sheet(isPresented: $showMusicPicker) {
             MusicPickerView(model: musicModel)
         }
+        .fullScreenCover(item: $phase) { phase in
+            switch phase {
+            case .generating:
+                SupercutProgressView(
+                    composer: composer,
+                    onCancel: {
+                        generationTask?.cancel()
+                        composer.cancel()
+                        isGenerating = false
+                        self.phase = nil
+                    },
+                    onComplete: { url in
+                        self.phase = .preview(url)
+                    }
+                )
+            case .preview(let url):
+                SupercutPreviewView(
+                    videoURL: url,
+                    onSave: {},
+                    onShare: {},
+                    onRegenerate: {
+                        generationTask?.cancel()
+                        isGenerating = false
+                        self.phase = nil
+                        generateSupercut()
+                    },
+                    onDismiss: {
+                        isGenerating = false
+                        self.phase = nil
+                    }
+                )
+            }
+        }
+        .onDisappear {
+            generationTask?.cancel()
+        }
     }
 
     // MARK: - Generate
 
+    /// Runs the full supercut pipeline: fetch assets → score with Vision →
+    /// load render-quality images for the winners → compose video → preview.
     private func generateSupercut() {
+        guard !isGenerating else { return }
         isGenerating = true
-        // TODO: Create SupercutComposer, load photos via PhotoLoader,
-        // analyze via PhotoAnalyzer, and navigate to SupercutProgressView.
-        // This will be wired up once SupercutComposer and SupercutProgressView are created.
+        phase = .generating
+
+        let source = albumSource
+        let speed = cutSpeed
+        let maxLength = TimeInterval(maxDuration.rawValue)
+        let musicURL = musicModel.selectedTrackURL
+
+        generationTask = Task { @MainActor in
+            // 1. Fetch assets for the source on a background queue.
+            let assets = await Task.detached {
+                LiveAssetFetcher().fetchAssets(for: source, sortOrder: .newestFirst)
+            }.value
+
+            if Task.isCancelled { return }
+
+            guard !assets.isEmpty else {
+                composer.error = "No photos found for this album."
+                return
+            }
+
+            // 2. Cap the candidate pool, then score with the Vision analyzer.
+            let candidates = Array(assets.prefix(Self.maxPhotos)).map { PhotoItem(asset: $0) }
+            composer.status = "Analyzing \(candidates.count) photos..."
+
+            let analyzer = PhotoAnalyzer()
+            let scores = await analyzer.analyzeAndRank(candidates) { _ in }
+
+            if Task.isCancelled { return }
+
+            // 3. Keep the best photos (already sorted best-first), preserving
+            //    chronological order so the montage reads as a timeline.
+            let bestItems = scores
+                .prefix(Self.maxPhotos)
+                .map(\.item)
+                .sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+
+            // 4. Load render-quality images for the chosen photos.
+            composer.status = "Loading photos..."
+            await loadRenderImages(for: bestItems)
+
+            if Task.isCancelled { return }
+
+            let renderable = bestItems.filter { $0.fullImage != nil || $0.mediaType == .video }
+            guard !renderable.isEmpty else {
+                composer.error = "Could not load photos to render."
+                return
+            }
+
+            // 5. Compose the video. SupercutProgressView observes `composer`
+            //    and fires onComplete when `isComplete` flips true.
+            await composer.compose(
+                photos: renderable,
+                musicURL: musicURL,
+                cutSpeed: speed,
+                maxDuration: maxLength
+            )
+        }
+    }
+
+    /// Loads a high-resolution image for each still photo and assigns it to
+    /// `fullImage`. Runs on a detached background task so it never blocks the UI,
+    /// and reports progress through the composer's status line.
+    private func loadRenderImages(for items: [PhotoItem]) async {
+        let targetSize = CGSize(width: 1080, height: 1920)
+        let total = items.count
+
+        await Task.detached {
+            let manager = PHImageManager.default()
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .exact
+            options.isNetworkAccessAllowed = true
+            options.isSynchronous = true
+
+            for (index, item) in items.enumerated() {
+                if Task.isCancelled { return }
+                guard item.fullImage == nil, item.mediaType != .video, let asset = item.asset else { continue }
+
+                manager.requestImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,
+                    options: options
+                ) { image, _ in
+                    if let image { item.fullImage = image }
+                }
+
+                if index % 10 == 0 {
+                    let loaded = index + 1
+                    await MainActor.run {
+                        composer.status = "Loading photos... \(loaded)/\(total)"
+                    }
+                }
+            }
+        }.value
     }
 }
 

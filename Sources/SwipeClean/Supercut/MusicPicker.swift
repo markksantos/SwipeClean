@@ -62,8 +62,25 @@ final class MusicPickerModel: ObservableObject {
     @Published var pixabayTracks: [PixabayTrack] = []
     @Published var isLoadingTracks = false
 
-    /// Placeholder Pixabay API key. Replace with a real key before shipping.
-    private static let pixabayAPIKey = "YOUR_PIXABAY_API_KEY"
+    /// Pixabay API key, read from the app's Info.plist (`PixabayAPIKey`), which
+    /// is populated from the `PIXABAY_API_KEY` build setting (see Secrets.xcconfig).
+    /// Returns nil when no key is configured so the UI can degrade gracefully
+    /// instead of firing a request that always 400s.
+    static var pixabayAPIKey: String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "PixabayAPIKey") as? String else {
+            return nil
+        }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == "YOUR_PIXABAY_API_KEY" || trimmed == "$(PIXABAY_API_KEY)" {
+            return nil
+        }
+        return trimmed
+    }
+
+    /// Whether a usable Pixabay key is configured.
+    var isPixabayConfigured: Bool { Self.pixabayAPIKey != nil }
+
+    @Published var pixabayError: String?
 
     private var audioPlayer: AVAudioPlayer?
 
@@ -71,18 +88,40 @@ final class MusicPickerModel: ObservableObject {
 
     /// Fetch tracks from the Pixabay music API.
     func fetchPixabayTracks(query: String = "upbeat") async {
-        await MainActor.run { isLoadingTracks = true }
+        guard let key = Self.pixabayAPIKey else {
+            await MainActor.run {
+                pixabayError = "Free music isn't set up. Add a Pixabay API key to enable it, or pick a song from Apple Music or Files."
+                pixabayTracks = []
+            }
+            return
+        }
+
+        await MainActor.run {
+            isLoadingTracks = true
+            pixabayError = nil
+        }
         defer { Task { @MainActor in isLoadingTracks = false } }
 
         let sanitized = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        guard let url = URL(string: "https://pixabay.com/api/?key=\(Self.pixabayAPIKey)&q=\(sanitized)&category=music") else { return }
+        guard let url = URL(string: "https://pixabay.com/api/?key=\(key)&q=\(sanitized)&category=music") else { return }
 
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(PixabayMusicResponse.self, from: data)
-            await MainActor.run { pixabayTracks = response.hits }
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                await MainActor.run {
+                    pixabayError = http.statusCode == 400
+                        ? "The Pixabay API key looks invalid."
+                        : "Couldn't load free music (HTTP \(http.statusCode))."
+                    pixabayTracks = []
+                }
+                return
+            }
+            let decoded = try JSONDecoder().decode(PixabayMusicResponse.self, from: data)
+            await MainActor.run { pixabayTracks = decoded.hits }
         } catch {
-            print("Pixabay fetch error: \(error)")
+            await MainActor.run {
+                pixabayError = "Couldn't load free music. Check your connection and try again."
+            }
         }
     }
 
@@ -284,14 +323,44 @@ struct MusicPickerView: View {
             HStack {
                 TextField("Search free music...", text: $searchQuery)
                     .textFieldStyle(.roundedBorder)
+                    .disabled(!model.isPixabayConfigured)
                 Button("Search") {
                     Task { await model.fetchPixabayTracks(query: searchQuery) }
                 }
                 .buttonStyle(.bordered)
+                .disabled(!model.isPixabayConfigured)
             }
             .padding()
 
-            if model.isLoadingTracks {
+            if !model.isPixabayConfigured {
+                Spacer()
+                VStack(spacing: 12) {
+                    Image(systemName: "waveform.slash")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                    Text("Free Library not configured")
+                        .font(.headline)
+                    Text("Add a Pixabay API key to enable royalty-free music, or pick a song from Apple Music or Files.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                Spacer()
+            } else if let error = model.pixabayError {
+                Spacer()
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundStyle(.orange)
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                Spacer()
+            } else if model.isLoadingTracks {
                 Spacer()
                 ProgressView("Loading tracks...")
                 Spacer()

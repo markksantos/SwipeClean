@@ -21,7 +21,7 @@ extension PHImageManager: ImageLoading {}
 protocol PhotoLibraryPerforming {
     func performChanges(
         _ changeBlock: @escaping @Sendable () -> Void,
-        completionHandler: ((Bool, (any Error)?) -> Void)?
+        completionHandler: (@Sendable (Bool, (any Error)?) -> Void)?
     )
 }
 

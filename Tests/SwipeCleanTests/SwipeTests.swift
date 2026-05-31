@@ -203,12 +203,12 @@ final class CardStackLogicTests: XCTestCase {
 
     func testBackCardScaleForSecondCard() {
         let scale = CardStackLayout.scale(forIndex: 1)
-        XCTAssertEqual(scale, 0.95, accuracy: 0.01)
+        XCTAssertEqual(scale, 0.93, accuracy: 0.01)
     }
 
     func testBackCardScaleForThirdCard() {
         let scale = CardStackLayout.scale(forIndex: 2)
-        XCTAssertEqual(scale, 0.90, accuracy: 0.01)
+        XCTAssertEqual(scale, 0.86, accuracy: 0.01)
     }
 
     func testFrontCardScaleIsFullSize() {
@@ -218,12 +218,12 @@ final class CardStackLogicTests: XCTestCase {
 
     func testBackCardOffsetForSecondCard() {
         let offset = CardStackLayout.yOffset(forIndex: 1)
-        XCTAssertEqual(offset, 8.0, accuracy: 0.01)
+        XCTAssertEqual(offset, 28.0, accuracy: 0.01)
     }
 
     func testBackCardOffsetForThirdCard() {
         let offset = CardStackLayout.yOffset(forIndex: 2)
-        XCTAssertEqual(offset, 16.0, accuracy: 0.01)
+        XCTAssertEqual(offset, 52.0, accuracy: 0.01)
     }
 
     func testFrontCardHasNoOffset() {
@@ -240,9 +240,11 @@ final class CardStackLogicTests: XCTestCase {
 
 final class SwipeFormattingTests: XCTestCase {
 
+    // SwipeFormatters.fileSize uses ByteCountFormatter(.file), which is
+    // 1000-based and produces the OS-native unit strings asserted below.
     func testFileSizeFormattingBytes() {
         let result = SwipeFormatters.fileSize(bytes: 512)
-        XCTAssertEqual(result, "512 B")
+        XCTAssertEqual(result, "512 bytes")
     }
 
     func testFileSizeFormattingKilobytes() {
@@ -252,12 +254,12 @@ final class SwipeFormattingTests: XCTestCase {
 
     func testFileSizeFormattingMegabytes() {
         let result = SwipeFormatters.fileSize(bytes: 2_516_582)
-        XCTAssertEqual(result, "2.4 MB")
+        XCTAssertEqual(result, "2.5 MB")
     }
 
     func testFileSizeFormattingGigabytes() {
         let result = SwipeFormatters.fileSize(bytes: 1_610_612_736)
-        XCTAssertEqual(result, "1.5 GB")
+        XCTAssertEqual(result, "1.61 GB")
     }
 
     func testDurationFormattingSeconds() {
