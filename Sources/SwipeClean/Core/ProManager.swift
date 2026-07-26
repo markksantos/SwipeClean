@@ -82,6 +82,16 @@ final class ProManager: ObservableObject {
         // Trust the cached flag for the first frame so gated rows don't flash
         // locked on launch; the App Store is the authority a moment later.
         isPro = defaults.bool(forKey: entitlementKey)
+
+        #if DEBUG
+        if ScreenshotMode.forcesPro {
+            // Capture runs photograph the Pro features; without this the App
+            // Store would refresh entitlements and re-lock them mid-screenshot.
+            isPro = true
+            return
+        }
+        #endif
+
         updatesTask = listenForTransactions()
 
         Task {

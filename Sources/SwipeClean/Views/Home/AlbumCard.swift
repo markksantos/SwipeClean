@@ -9,7 +9,10 @@ struct AlbumCard: View {
     var isLocked: Bool = false
     let onTap: () -> Void
 
-    @State private var thumbnail: UIImage?
+    /// Injected so previews and tests are not forced to touch a real library.
+    var assetFetcher: AssetFetching = LiveAssetFetcher()
+
+    @State private var previewAsset: PHAsset?
 
     private var isEmpty: Bool {
         photoCount == 0
@@ -72,22 +75,9 @@ struct AlbumCard: View {
 
                 // Preview thumbnail
                 if !isEmpty {
-                    if let thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 44, height: 44)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    } else {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.secondary.opacity(0.12))
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            )
-                    }
+                    AssetThumbnailView(asset: previewAsset, side: 44)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
 
                 if isLocked {
@@ -109,103 +99,15 @@ struct AlbumCard: View {
         // A locked row must stay tappable even with nothing to show yet, because
         // its tap opens the paywall rather than the album.
         .disabled(isEmpty && !isLocked)
-        .task {
-            guard !isEmpty else { return }
-            thumbnail = await loadThumbnail(for: source)
+        .task(id: source) {
+            guard !isEmpty, previewAsset == nil else { return }
+            // Off the main thread: a PhotoKit fetch against a large library is
+            // not instant, and this runs once per visible card.
+            let source = source
+            previewAsset = await Task.detached { assetFetcher.representativeAsset(for: source) }.value
         }
     }
 
-    /// Loads a small thumbnail (80x80) for the first asset of the album source.
-    private func loadThumbnail(for source: AlbumSource) async -> UIImage? {
-        let fetchResult: PHFetchResult<PHAsset>
-
-        switch source {
-        case .allPhotos:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(with: options)
-        case .recents:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-            options.predicate = NSPredicate(format: "creationDate >= %@", thirtyDaysAgo as NSDate)
-            fetchResult = PHAsset.fetchAssets(with: options)
-        case .screenshots:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.predicate = NSPredicate(format: "mediaSubtype == %d", PHAssetMediaSubtype.photoScreenshot.rawValue)
-            fetchResult = PHAsset.fetchAssets(with: options)
-        case .videos:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(with: .video, options: options)
-        case .selfies:
-            let collections = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumSelfPortraits, options: nil)
-            guard let collection = collections.firstObject else { return nil }
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-        case .livePhotos:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.predicate = NSPredicate(format: "mediaSubtype == %d", PHAssetMediaSubtype.photoLive.rawValue)
-            fetchResult = PHAsset.fetchAssets(with: options)
-        case .favorites:
-            let collections = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumFavorites, options: nil)
-            guard let collection = collections.firstObject else { return nil }
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-        case .album(let collection):
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-        case .onThisDay, .random, .duplicates, .smartCleanup, .similarPhotos, .autoClean:
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            fetchResult = PHAsset.fetchAssets(with: options)
-        case .month(let year, let month):
-            let calendar = Calendar.current
-            var startComps = DateComponents()
-            startComps.year = year
-            startComps.month = month
-            startComps.day = 1
-            guard let start = calendar.date(from: startComps),
-                  let end = calendar.date(byAdding: .month, value: 1, to: start) else { return nil }
-            let options = PHFetchOptions()
-            options.fetchLimit = 1
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", start as NSDate, end as NSDate)
-            fetchResult = PHAsset.fetchAssets(with: options)
-        }
-
-        guard let asset = fetchResult.firstObject else { return nil }
-
-        return await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .fastFormat
-            options.isNetworkAccessAllowed = false
-            options.resizeMode = .fast
-
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: CGSize(width: 80, height: 80),
-                contentMode: .aspectFill,
-                options: options
-            ) { image, _ in
-                continuation.resume(returning: image)
-            }
-        }
-    }
 }
 
 // MARK: - Press-Down Button Style

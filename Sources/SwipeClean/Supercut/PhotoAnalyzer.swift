@@ -101,11 +101,7 @@ final class PhotoAnalyzer {
 
         let analysis = analyzeImage(image)
 
-        // Composite: sharpness 30%, saliency 40%, face presence 30%.
-        var composite: Float = analysis.sharpness * 0.3
-            + analysis.saliency * 0.4
-            + (analysis.hasFaces ? 0.3 : 0.0)
-
+        var composite = analysis.quality
         if item.isFavorited {
             composite = min(composite * 1.5, 1.0)
         }
@@ -113,9 +109,9 @@ final class PhotoAnalyzer {
         return PhotoScore(
             item: item,
             qualityScore: composite,
-            hasFaces: analysis.hasFaces,
+            hasFaces: analysis.hasFaces ?? false,
             sharpness: analysis.sharpness,
-            saliencyScore: analysis.saliency
+            saliencyScore: analysis.saliency ?? 0
         )
     }
 
@@ -152,61 +148,124 @@ final class PhotoAnalyzer {
 
     // MARK: - Vision Analysis
 
-    /// Analyzes a single photo using the Vision framework.
+    /// What a single photo's analysis produced.
     ///
-    /// Runs:
-    /// 1. Face detection — determines whether faces are present
-    /// 2. Attention-based saliency — how "interesting" the image is
-    /// 3. Laplacian-variance sharpness — higher variance = sharper
-    private func analyzeImage(_ image: UIImage) -> (sharpness: Float, hasFaces: Bool, saliency: Float) {
-        guard let cgImage = image.cgImage else {
-            return (sharpness: 0, hasFaces: false, saliency: 0)
+    /// Saliency and faces are optional because the Vision requests behind them can
+    /// be genuinely unavailable — on the simulator they fail outright with "failed
+    /// to create espresso context", since there is no neural backend. Treating a
+    /// missing component as a zero silently deleted 40% of the score and ranked
+    /// every photo the same; `quality` renormalises over whatever actually ran.
+    struct Analysis {
+        var sharpness: Float
+        var saliency: Float?
+        var hasFaces: Bool?
+
+        /// Weighted composite over the available components, 0-1.
+        var quality: Float {
+            var weighted: Float = sharpness * Weight.sharpness
+            var total: Float = Weight.sharpness
+
+            if let saliency {
+                weighted += saliency * Weight.saliency
+                total += Weight.saliency
+            }
+            if let hasFaces {
+                weighted += (hasFaces ? 1 : 0) * Weight.faces
+                total += Weight.faces
+            }
+
+            guard total > 0 else { return 0 }
+            return min(max(weighted / total, 0), 1)
         }
 
-        let hasFaces = detectFaces(in: cgImage)
-        let saliency = computeSaliency(in: cgImage)
-        let sharpness = computeSharpness(of: cgImage)
+        enum Weight {
+            static let sharpness: Float = 0.3
+            static let saliency: Float = 0.4
+            static let faces: Float = 0.3
+        }
+    }
 
-        return (sharpness: sharpness, hasFaces: hasFaces, saliency: saliency)
+    /// Analyzes a single photo: Laplacian-variance sharpness, attention-based
+    /// saliency, and face presence.
+    func analyzeImage(_ image: UIImage) -> Analysis {
+        guard let cgImage = image.cgImage else {
+            return Analysis(sharpness: 0, saliency: nil, hasFaces: nil)
+        }
+
+        return Analysis(
+            sharpness: computeSharpness(of: cgImage),
+            saliency: computeSaliency(in: cgImage),
+            hasFaces: detectFaces(in: cgImage)
+        )
     }
 
     // MARK: Face Detection
 
-    private func detectFaces(in cgImage: CGImage) -> Bool {
+    /// nil when Vision could not run, which is different from "no faces here".
+    func detectFaces(in cgImage: CGImage) -> Bool? {
         let request = VNDetectFaceRectanglesRequest()
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
 
         do {
             try handler.perform([request])
-            if let results = request.results {
-                return !results.isEmpty
-            }
         } catch {
-            // Face detection failed — treat as no faces.
+            return nil
         }
 
-        return false
+        guard let results = request.results else { return nil }
+        return !results.isEmpty
     }
 
     // MARK: Saliency
 
-    private func computeSaliency(in cgImage: CGImage) -> Float {
+    /// Mean attention across Vision's attention heat map, 0-1.
+    ///
+    /// This previously read `observation.salientObjects`, which an
+    /// **attention**-based request never populates — only the objectness-based
+    /// request returns bounding boxes. So the `let salientObjects` binding always
+    /// failed and every photo scored 0 for saliency. The heat map lives in
+    /// `observation.pixelBuffer` and has to be read directly.
+    /// nil when Vision could not run at all.
+    func computeSaliency(in cgImage: CGImage) -> Float? {
         let request = VNGenerateAttentionBasedSaliencyImageRequest()
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
 
         do {
             try handler.perform([request])
-            if let observation = request.results?.first as? VNSaliencyImageObservation,
-               let salientObjects = observation.salientObjects, !salientObjects.isEmpty {
-                // Use the maximum confidence among salient regions as the score.
-                let maxConfidence = salientObjects.map(\.confidence).max() ?? 0
-                return maxConfidence
-            }
         } catch {
-            // Saliency detection failed.
+            return nil
         }
 
-        return 0
+        guard let observation = request.results?.first as? VNSaliencyImageObservation else {
+            return nil
+        }
+        return Self.meanValue(ofOneComponentFloatBuffer: observation.pixelBuffer)
+    }
+
+    /// Averages a `kCVPixelFormatType_OneComponent32Float` buffer, which is what
+    /// Vision's saliency heat map is.
+    private static func meanValue(ofOneComponentFloatBuffer buffer: CVPixelBuffer) -> Float {
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+
+        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return 0 }
+
+        let width = CVPixelBufferGetWidth(buffer)
+        let height = CVPixelBufferGetHeight(buffer)
+        let stride = CVPixelBufferGetBytesPerRow(buffer)
+        guard width > 0, height > 0 else { return 0 }
+
+        var total: Float = 0
+        for row in 0..<height {
+            // Row-by-row: the buffer is padded to its stride, so it cannot be
+            // walked as one flat array of width*height floats.
+            let rowStart = base.advanced(by: row * stride).assumingMemoryBound(to: Float.self)
+            for column in 0..<width {
+                total += rowStart[column]
+            }
+        }
+
+        return min(max(total / Float(width * height), 0), 1)
     }
 
     // MARK: Sharpness (Laplacian Variance)
@@ -216,9 +275,15 @@ final class PhotoAnalyzer {
     /// Approach:
     /// 1. Convert to grayscale via CIFilter.
     /// 2. Apply CIConvolution3X3 with a Laplacian kernel.
-    /// 3. Read back pixel data and compute variance of intensities.
-    /// 4. Normalize to 0-1 (clamped; empirical max around 2500).
-    private func computeSharpness(of cgImage: CGImage) -> Float {
+    /// 3. Read the result back as 32-bit float and take the variance.
+    /// 4. Normalize to 0-1.
+    ///
+    /// The read-back has to be float. Rendering to `.RGBA8` clamped the
+    /// convolution's negative values — half of a Laplacian's output — to zero, and
+    /// paired an RGBA format with a one-channel grey colour space, so the variance
+    /// came out at essentially zero for every image. Combined with the saliency
+    /// bug above, that made every quality score 0.
+    func computeSharpness(of cgImage: CGImage) -> Float {
         let ciContext = CIContext(options: [.useSoftwareRenderer: false])
         let ciImage = CIImage(cgImage: cgImage)
 
@@ -249,47 +314,51 @@ final class PhotoAnalyzer {
         let extent = outputImage.extent
         let scale = min(maxDim / extent.width, maxDim / extent.height, 1.0)
         let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        let scaledExtent = scaledImage.extent
+
+        // Trim the outer ring. A 3x3 convolution has no real neighbours at the
+        // image edge, so those pixels read as a hard edge and gave even a flat
+        // grey image a non-zero variance — a constant offset on every score.
+        let scaledExtent = scaledImage.extent.insetBy(dx: 2, dy: 2)
+        guard !scaledExtent.isEmpty else { return 0 }
 
         let width = Int(scaledExtent.width)
         let height = Int(scaledExtent.height)
         guard width > 0, height > 0 else { return 0 }
 
-        let bytesPerPixel = 4
-        let bytesPerRow = width * bytesPerPixel
-        var pixelData = [UInt8](repeating: 0, count: height * bytesPerRow)
+        let pixelCount = width * height
+        let bytesPerRow = width * 4  // one Float32 per pixel
+        var pixelData = [Float](repeating: 0, count: pixelCount)
 
         ciContext.render(
             scaledImage,
             toBitmap: &pixelData,
             rowBytes: bytesPerRow,
             bounds: scaledExtent,
-            format: .RGBA8,
-            colorSpace: CGColorSpaceCreateDeviceGray()
+            // Single-channel float keeps the convolution's negative lobes, which
+            // carry as much edge information as the positive ones.
+            format: .Rf,
+            colorSpace: nil
         )
-
-        // Compute variance of the red channel (grayscale, so R=G=B).
-        let pixelCount = width * height
-        guard pixelCount > 0 else { return 0 }
 
         var sum: Float = 0
         var sumSq: Float = 0
-
-        for i in 0..<pixelCount {
-            // After convolution values can be negative, stored as unsigned.
-            // We only need the magnitude spread (variance).
-            let value = Float(pixelData[i * bytesPerPixel])
+        for value in pixelData {
             sum += value
             sumSq += value * value
         }
 
         let mean = sum / Float(pixelCount)
-        let variance = (sumSq / Float(pixelCount)) - (mean * mean)
+        let variance = max((sumSq / Float(pixelCount)) - (mean * mean), 0)
 
-        // Normalize: empirically, variance above ~2500 indicates very sharp images.
-        let normalized = min(max(variance / 2500.0, 0), 1)
-        return normalized
+        return min(variance / Self.sharpVariance, 1)
     }
+
+    /// Laplacian variance that counts as fully sharp.
+    ///
+    /// Core Image works in 0-1 intensities rather than 0-255, so this is small in
+    /// absolute terms. Only the ordering it produces matters — the tests assert a
+    /// sharp image outscores a blurred copy of itself rather than pinning a value.
+    private static let sharpVariance: Float = 0.02
 }
 
 // MARK: - Counter (Actor)

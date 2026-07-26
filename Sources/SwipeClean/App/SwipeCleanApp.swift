@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct SwipeCleanApp: App {
-    @StateObject private var permissionManager = PermissionManager()
+    @StateObject private var permissionManager = SwipeCleanApp.makePermissionManager()
     @StateObject private var sessionTracker = SessionTracker()
     @StateObject private var albumProvider = AlbumProvider()
     @StateObject private var deleteManager = DeleteManager()
@@ -13,6 +13,15 @@ struct SwipeCleanApp: App {
     // or an externally-approved purchase can be finished twice.
     @StateObject private var proManager = ProManager.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+
+    private static func makePermissionManager() -> PermissionManager {
+        #if DEBUG
+        if ScreenshotMode.isActive {
+            return PermissionManager(permissionProvider: GrantedPermissionProvider())
+        }
+        #endif
+        return PermissionManager()
+    }
 
     var body: some Scene {
         WindowGroup {

@@ -50,7 +50,35 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.nosleeplab.SwipeCleanTests
         GENERATE_INFOPLIST_FILE: true
 
+  # Exists to answer the system photo-permission alert, which no simctl command
+  # can dismiss. Deliberately kept out of the SwipeClean scheme's test action so
+  # `xcodebuild test` stays fast and headless.
+  SwipeCleanUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/SwipeCleanUITests
+    dependencies:
+      - target: SwipeClean
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nosleeplab.SwipeCleanUITests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_TARGET_NAME: SwipeClean
+
 schemes:
+  # Photo permission grant for the screenshot pipeline. Separate from the main
+  # scheme so `xcodebuild test` never launches a UI test.
+  SwipeCleanPermission:
+    build:
+      targets:
+        SwipeClean: all
+        SwipeCleanUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - SwipeCleanUITests
+
   SwipeClean:
     build:
       targets:

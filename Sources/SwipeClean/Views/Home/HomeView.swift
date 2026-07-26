@@ -1,6 +1,10 @@
 import SwiftUI
 import Photos
 
+/// Path value for the storage dashboard, so it is reachable the same way every
+/// other destination is rather than through an inline `NavigationLink` view.
+struct StorageNavItem: Hashable {}
+
 struct HomeView: View {
     @EnvironmentObject private var permissionManager: PermissionManager
     @EnvironmentObject private var albumProvider: AlbumProvider
@@ -52,7 +56,7 @@ struct HomeView: View {
                             startPoint: animateGradient ? .topLeading : .bottomLeading,
                             endPoint: animateGradient ? .bottomTrailing : .topTrailing
                         )
-                        .frame(height: 140)
+                        .frame(height: 112)
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .onAppear {
                             withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
@@ -60,11 +64,15 @@ struct HomeView: View {
                             }
                         }
 
+                        // Deliberately no app name here: the navigation title
+                        // already says "SwipeClean" a few points above, and
+                        // printing it twice cost a third of the first screen.
                         VStack(spacing: 6) {
-                            Text("SwipeClean")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                            Image(systemName: "hand.draw")
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundStyle(.tint)
                             Text("Swipe left to clean, right to keep")
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -82,7 +90,7 @@ struct HomeView: View {
                     )
 
                     // Storage breakdown card
-                    NavigationLink(destination: StorageBreakdownView()) {
+                    NavigationLink(value: StorageNavItem()) {
                         HStack {
                             Image(systemName: "chart.bar.fill")
                                 .font(.title2)
@@ -228,6 +236,9 @@ struct HomeView: View {
                         .environmentObject(milestoneTracker)
                 }
             }
+            .navigationDestination(for: StorageNavItem.self) { _ in
+                StorageBreakdownView()
+            }
             .navigationDestination(for: BulkSelectNavItem.self) { item in
                 BulkSelectView(albumSource: item.albumSource, albumName: item.albumName)
                     .environmentObject(deleteManager)
@@ -255,6 +266,10 @@ struct HomeView: View {
             // Fetch sources on a background queue (publishes on main internally)
             albumProvider.fetchAvailableSourcesAsync()
             withAnimation { cardsVisible = true }
+
+            #if DEBUG
+            openRequestedScreenshotScreen()
+            #endif
         }
         .onReceive(permissionManager.libraryDidChange) { _ in
             // Covers deletions made elsewhere and, importantly, the user adding
@@ -262,6 +277,56 @@ struct HomeView: View {
             albumProvider.fetchAvailableSourcesAsync()
         }
     }
+
+    #if DEBUG
+    /// Pushes the screen the capture script asked for, once albums are available.
+    private func openRequestedScreenshotScreen() {
+        guard let screen = ScreenshotMode.screen else { return }
+
+        switch screen {
+        case .home:
+            break
+        case .settings:
+            showSettings = true
+        case .achievements:
+            showAchievements = true
+        case .paywall:
+            paywallFeature = .smartCleanup
+        case .storage, .swipe, .similar, .supercut:
+            // These need the album list, which arrives asynchronously.
+            Task { @MainActor in
+                for _ in 0..<40 where albumProvider.sources.isEmpty {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+                pushScreenshotDestination(screen)
+            }
+        }
+    }
+
+    @MainActor
+    private func pushScreenshotDestination(_ screen: ScreenshotMode.Screen) {
+        switch screen {
+        case .storage:
+            navigationPath.append(StorageNavItem())
+        case .similar:
+            if let info = albumProvider.sources.first(where: { $0.source == .similarPhotos }) {
+                navigationPath.append(info)
+            }
+        case .swipe:
+            if let info = albumProvider.sources.first(where: { $0.source == .allPhotos }) {
+                navigationPath.append(info)
+            }
+        case .supercut:
+            if let info = albumProvider.sources.first(where: { $0.source == .allPhotos }) {
+                navigationPath.append(
+                    SupercutNavItem(albumSource: info.source, photoCount: info.count)
+                )
+            }
+        default:
+            break
+        }
+    }
+    #endif
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)

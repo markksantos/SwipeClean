@@ -4,7 +4,33 @@ import Photos
 final class LiveAssetFetcher: AssetFetching {
 
     func fetchAssets(for source: AlbumSource, sortOrder: SortOrder) -> [PHAsset] {
+        let fetchResult = fetchResult(for: source, sortOrder: sortOrder, limit: 0)
+
+        var assets: [PHAsset] = []
+        assets.reserveCapacity(fetchResult.count)
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(asset)
+        }
+        return assets
+    }
+
+    /// The newest asset in a source, for the album card's preview thumbnail.
+    ///
+    /// Album cards used to carry their own copy of the switch below, which had
+    /// drifted: it matched screenshots and Live Photos on `mediaSubtype` instead
+    /// of the smart albums used here, so those cards previewed the wrong asset.
+    func representativeAsset(for source: AlbumSource) -> PHAsset? {
+        fetchResult(for: source, sortOrder: .newestFirst, limit: 1).firstObject
+    }
+
+    /// - Parameter limit: `0` for no limit, matching `PHFetchOptions.fetchLimit`.
+    private func fetchResult(
+        for source: AlbumSource,
+        sortOrder: SortOrder,
+        limit: Int
+    ) -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
+        options.fetchLimit = limit
         options.sortDescriptors = [
             NSSortDescriptor(key: "creationDate", ascending: sortOrder == .oldestFirst)
         ]
@@ -95,18 +121,14 @@ final class LiveAssetFetcher: AssetFetching {
             fetchResult = PHAsset.fetchAssets(with: options)
 
         case .autoClean:
-            // Auto Clean loads assets via CleanupRuleEngine, not through this fetcher.
-            let emptyOpts = PHFetchOptions()
-            emptyOpts.fetchLimit = 0
-            fetchResult = PHAsset.fetchAssets(with: emptyOpts)
+            // Auto Clean loads assets via CleanupRuleEngine, not through this
+            // fetcher, so this must come back empty rather than "everything".
+            let noAssets = PHFetchOptions()
+            noAssets.predicate = NSPredicate(value: false)
+            fetchResult = PHAsset.fetchAssets(with: noAssets)
         }
 
-        var assets: [PHAsset] = []
-        assets.reserveCapacity(fetchResult.count)
-        fetchResult.enumerateObjects { asset, _, _ in
-            assets.append(asset)
-        }
-        return assets
+        return fetchResult
     }
 
     func fetchAlbumSources() -> [AlbumSourceInfo] {

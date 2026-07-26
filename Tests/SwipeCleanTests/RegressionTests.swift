@@ -438,3 +438,135 @@ final class ProGatingTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Quality scoring actually produces a score
+
+/// The Pro tier sells Smart Cleanup and Similar Photos on quality ranking, and
+/// both were ranking everything at exactly 0: saliency read `salientObjects` from
+/// an attention-based request that never populates it, and sharpness rendered a
+/// Laplacian through `.RGBA8`, clamping away every negative value.
+final class PhotoAnalyzerScoringTests: XCTestCase {
+
+    /// High-frequency checkerboard — about as "sharp" as an image gets.
+    private func checkerboard(side: Int = 400, square: Int = 8) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            UIColor.black.setFill()
+            for row in 0..<(side / square) where true {
+                for column in 0..<(side / square) where (row + column).isMultiple(of: 2) {
+                    context.fill(CGRect(x: column * square, y: row * square, width: square, height: square))
+                }
+            }
+        }
+    }
+
+    private func blurred(_ image: UIImage, radius: Double = 8) -> UIImage {
+        let input = CIImage(image: image)!
+        let output = input.applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius])
+            .cropped(to: input.extent)
+        let context = CIContext()
+        let cgImage = context.createCGImage(output, from: input.extent)!
+        return UIImage(cgImage: cgImage)
+    }
+
+    func test_sharpness_is_not_always_zero() throws {
+        let analyzer = PhotoAnalyzer()
+        let cgImage = try XCTUnwrap(checkerboard().cgImage)
+
+        let sharpness = analyzer.computeSharpness(of: cgImage)
+
+        XCTAssertGreaterThan(
+            sharpness, 0.01,
+            "A checkerboard is maximally detailed; a zero here means the Laplacian read-back is broken"
+        )
+        XCTAssertLessThanOrEqual(sharpness, 1)
+    }
+
+    func test_a_blurred_image_scores_lower_than_the_sharp_original() throws {
+        let analyzer = PhotoAnalyzer()
+        let sharp = checkerboard()
+        let soft = blurred(sharp)
+
+        let sharpScore = analyzer.computeSharpness(of: try XCTUnwrap(sharp.cgImage))
+        let softScore = analyzer.computeSharpness(of: try XCTUnwrap(soft.cgImage))
+
+        // Ordering is the only thing the feature needs; absolute values are not
+        // pinned so the normalisation constant stays free to change.
+        XCTAssertGreaterThan(
+            sharpScore, softScore,
+            "Smart Cleanup surfaces low-quality photos first, which requires blur to score lower"
+        )
+    }
+
+    func test_a_flat_image_has_no_sharpness() throws {
+        let analyzer = PhotoAnalyzer()
+        let flat = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 200)).image { context in
+            UIColor.gray.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 200, height: 200))
+        }
+
+        // A flat field has no edges anywhere. It used to score above zero purely
+        // from the convolution's border artefacts.
+        XCTAssertLessThan(analyzer.computeSharpness(of: try XCTUnwrap(flat.cgImage)), 0.005)
+    }
+
+    /// Saliency is either a real fraction or unavailable — never a silent zero.
+    ///
+    /// Vision's neural requests cannot run on the simulator at all (they throw
+    /// "failed to create espresso context"), so this asserts the contract rather
+    /// than a value: nil when unavailable, in range when it ran.
+    func test_saliency_is_either_a_fraction_or_unavailable() throws {
+        let analyzer = PhotoAnalyzer()
+        let subject = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 400)).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 400, height: 400))
+            UIColor.systemRed.setFill()
+            context.cgContext.fillEllipse(in: CGRect(x: 140, y: 140, width: 120, height: 120))
+        }
+
+        if let saliency = analyzer.computeSaliency(in: try XCTUnwrap(subject.cgImage)) {
+            XCTAssertGreaterThanOrEqual(saliency, 0)
+            XCTAssertLessThanOrEqual(saliency, 1)
+        }
+    }
+
+    /// The regression that made every badge read 0%: a detailed photo has to score
+    /// above the rounding floor even where Vision is unavailable and sharpness is
+    /// the only component that ran.
+    func test_composite_score_is_non_zero_for_a_detailed_photo() {
+        let analysis = PhotoAnalyzer().analyzeImage(checkerboard())
+
+        XCTAssertGreaterThan(
+            analysis.quality, 0.005,
+            "Anything at or below this rounds to 0% in the Similar Photos badge"
+        )
+    }
+
+    /// A missing component must not drag the score down; the weights renormalise
+    /// over whatever ran, so sharpness alone still spans the full 0-1 range.
+    func test_quality_renormalises_over_available_components() {
+        let sharpOnly = PhotoAnalyzer.Analysis(sharpness: 1, saliency: nil, hasFaces: nil)
+        XCTAssertEqual(sharpOnly.quality, 1, accuracy: 0.001)
+
+        let allThree = PhotoAnalyzer.Analysis(sharpness: 1, saliency: 1, hasFaces: true)
+        XCTAssertEqual(allThree.quality, 1, accuracy: 0.001)
+
+        let nothing = PhotoAnalyzer.Analysis(sharpness: 0, saliency: nil, hasFaces: nil)
+        XCTAssertEqual(nothing.quality, 0, accuracy: 0.001)
+    }
+
+    func test_a_sharper_photo_outranks_a_softer_one_with_the_same_other_signals() {
+        let sharp = PhotoAnalyzer.Analysis(sharpness: 0.9, saliency: 0.5, hasFaces: false)
+        let soft = PhotoAnalyzer.Analysis(sharpness: 0.1, saliency: 0.5, hasFaces: false)
+
+        XCTAssertGreaterThan(sharp.quality, soft.quality)
+    }
+
+    func test_faces_raise_the_score() {
+        let withFace = PhotoAnalyzer.Analysis(sharpness: 0.5, saliency: 0.5, hasFaces: true)
+        let without = PhotoAnalyzer.Analysis(sharpness: 0.5, saliency: 0.5, hasFaces: false)
+
+        XCTAssertGreaterThan(withFace.quality, without.quality)
+    }
+}

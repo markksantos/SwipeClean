@@ -31,6 +31,13 @@ extension PHPhotoLibrary: PhotoLibraryPerforming {}
 protocol AssetFetching {
     func fetchAssets(for source: AlbumSource, sortOrder: SortOrder) -> [PHAsset]
     func fetchAlbumSources() -> [AlbumSourceInfo]
+    /// Newest asset in a source, for an album card's preview thumbnail.
+    func representativeAsset(for source: AlbumSource) -> PHAsset?
+}
+
+extension AssetFetching {
+    // Mocks in the test suite have no library to represent.
+    func representativeAsset(for source: AlbumSource) -> PHAsset? { nil }
 }
 
 /// Abstracts PHPhotoLibrary authorization for testability.
