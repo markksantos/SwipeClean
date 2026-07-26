@@ -26,6 +26,10 @@ struct CardStack: View {
                     onDoubleTap: { onShowDetail(current) },
                     onLongPress: { onShowDetail(current) }
                 )
+                // Identity per photo, so each card gets its own gesture state. Without
+                // this SwiftUI reuses one instance for every photo and the flung-off
+                // state leaks onto the next card.
+                .id(current.id)
                 .zIndex(Double(CardStackLayout.maxVisibleCards))
             }
         }

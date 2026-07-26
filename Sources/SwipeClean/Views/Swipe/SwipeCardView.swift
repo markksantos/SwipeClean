@@ -220,12 +220,25 @@ struct SwipeCardView: View {
 
     // MARK: - Fly Off
 
+    /// Duration of the fly-off, and therefore how long before the deck advances.
+    static let flyOffDuration: TimeInterval = 0.2
+
     private func flyOff(direction: SwipeDirection) {
         flyDirection = direction
-        // Fire callback immediately so next card loads without delay
-        onSwiped(direction)
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.easeOut(duration: Self.flyOffDuration)) {
             isFlyingOff = true
+        }
+
+        // Advance once the card is actually gone. This used to fire immediately,
+        // "so next card loads without delay" — but `CardStack` renders the front
+        // card at a fixed position in the view tree, so SwiftUI handed the next
+        // photo to *this same view instance*, `isFlyingOff` stayed true, and the
+        // new card was drawn at opacity 0 off-screen with every gesture rejected
+        // by the `guard !isFlyingOff` below. One swipe killed the deck until the
+        // screen was dismissed. `CardStack` now also keys the card on the photo's
+        // id so the incoming card genuinely starts fresh.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.flyOffDuration) {
+            onSwiped(direction)
         }
     }
 

@@ -67,13 +67,29 @@ export default {
     },
   ],
 
-  // App preview beats. Recorded from the simulator; stills stand in until the
-  // recordings exist so the composition can be checked in isolation.
+  // App preview beats.
+  //
+  // The two swipe beats are real screen recordings, not stills: Apple requires an
+  // App Preview to be captured from the app in use, and for an app whose pitch is
+  // a gesture, a slideshow undersells it. Recorded with
+  // ../../_pipeline/record.sh driving SwipeCleanUITests/DemoFootageUITests.
+  //
+  // Total runs ~17s, inside Apple's 15-30s window for an App Preview.
   beats: [
-    { shot: 'shots/01-home.png', caption: 'Pick where to start', seconds: 2.4 },
-    { shot: 'shots/02-swipe.png', caption: 'Left to clean, right to keep', seconds: 3.0 },
-    { shot: 'shots/03-similar.png', caption: 'Near-duplicates, grouped', seconds: 2.6 },
-    { shot: 'shots/05-storage.png', caption: 'Watch the space come back', seconds: 2.4 },
-    { shot: 'shots/04-supercut.png', caption: 'Make a montage of what you kept', seconds: 2.6 },
+    {
+      clip: 'clips/swipe-demo.mp4',
+      startFrom: 0.4,
+      caption: 'Left to clean, right to keep',
+      seconds: 3.8,
+    },
+    {
+      clip: 'clips/swipe-demo.mp4',
+      startFrom: 8.6,
+      caption: 'Undo anything, any time',
+      seconds: 3.4,
+    },
+    { shot: 'shots/03-similar.png', caption: 'Near-duplicates, grouped and scored', seconds: 3.4 },
+    { shot: 'shots/05-storage.png', caption: 'Watch the space come back', seconds: 3.2 },
+    { shot: 'shots/04-supercut.png', caption: 'Make a montage of what you kept', seconds: 3.4 },
   ],
 };
