@@ -4,79 +4,52 @@ import SwiftUI
 /// Front card is interactive, back cards are scaled down and offset.
 struct CardStack: View {
     @EnvironmentObject var photoLoader: PhotoLoader
-    @EnvironmentObject var deleteManager: DeleteManager
-    @EnvironmentObject var sessionTracker: SessionTracker
 
     let swipeThreshold: CGFloat
     let onShowDetail: (PhotoItem) -> Void
-
-    @ObservedObject var swipeHistory: SwipeHistory
+    let coordinator: SwipeCoordinator
 
     var body: some View {
-        let visiblePhotos = buildVisiblePhotos()
-
         ZStack {
-            ForEach(Array(visiblePhotos.enumerated().reversed()), id: \.element.id) { index, photo in
-                let stackIndex = index
+            // Back cards first, so the interactive front card draws over them.
+            ForEach(Array(backPhotos.enumerated()), id: \.element.id) { offset, photo in
+                backCard(photo: photo, depth: offset + 1)
+            }
 
-                if stackIndex == 0 {
-                    // Front card: interactive
-                    SwipeCardView(
-                        photo: photo,
-                        swipeThreshold: swipeThreshold,
-                        onSwiped: { direction in
-                            handleSwipe(direction: direction, photo: photo)
-                        },
-                        onDoubleTap: { onShowDetail(photo) },
-                        onLongPress: { onShowDetail(photo) }
-                    )
-                    .zIndex(Double(CardStackLayout.maxVisibleCards - stackIndex))
-                }
-                // Back cards hidden — only preload them for smooth transitions
+            if let current = photoLoader.currentPhoto {
+                SwipeCardView(
+                    photo: current,
+                    swipeThreshold: swipeThreshold,
+                    onSwiped: { direction in
+                        handleSwipe(direction: direction, photo: current)
+                    },
+                    onDoubleTap: { onShowDetail(current) },
+                    onLongPress: { onShowDetail(current) }
+                )
+                .zIndex(Double(CardStackLayout.maxVisibleCards))
             }
         }
     }
 
-    // MARK: - Back Card
+    // MARK: - Back Cards
 
-    @ViewBuilder
-    private func backCard(photo: PhotoItem, stackIndex: Int) -> some View {
-        GeometryReader { geometry in
-            let cardWidth = geometry.size.width - 32
-            let cardHeight = cardWidth * (4.0 / 3.0)
+    /// The next couple of photos, drawn behind the front card so the deck reads as
+    /// a physical stack and the next photo is already on screen when the front one
+    /// flies away.
+    private var backPhotos: [PhotoItem] {
+        Array(photoLoader.upcomingPhotos.prefix(CardStackLayout.maxVisibleCards - 1))
+    }
 
-            Group {
-                if let image = photo.thumbnail ?? photo.fullImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: cardWidth, height: cardHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                } else {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray5))
-                        .frame(width: cardWidth, height: cardHeight)
-                }
-            }
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-            .scaleEffect(CardStackLayout.scale(forIndex: stackIndex))
-            .offset(y: CardStackLayout.yOffset(forIndex: stackIndex))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private func backCard(photo: PhotoItem, depth: Int) -> some View {
+        AssetThumbnailView(asset: photo.asset, side: 420)
+            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+            .padding(.horizontal, 16)
+            .scaleEffect(CardStackLayout.scale(forIndex: depth))
+            .offset(y: CardStackLayout.yOffset(forIndex: depth))
             .allowsHitTesting(false)
-            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: photoLoader.currentIndex)
-        }
-    }
-
-    // MARK: - Visible Photos
-
-    private func buildVisiblePhotos() -> [PhotoItem] {
-        var photos: [PhotoItem] = []
-        if let current = photoLoader.currentPhoto {
-            photos.append(current)
-        }
-        let upcoming = Array(photoLoader.upcomingPhotos.prefix(CardStackLayout.maxVisibleCards - 1))
-        photos.append(contentsOf: upcoming)
-        return photos
+            .zIndex(Double(CardStackLayout.maxVisibleCards - depth))
     }
 
     // MARK: - Swipe Handling
@@ -84,32 +57,11 @@ struct CardStack: View {
     private func handleSwipe(direction: SwipeDirection, photo: PhotoItem) {
         switch direction {
         case .right:
-            // Keep: just advance
-            swipeHistory.push(action: .kept, photoId: photo.id, photo: photo)
-            sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
-            photoLoader.advance()
+            coordinator.record(.kept, photo: photo)
         case .left:
-            // Delete: mark for deletion, then advance
-            swipeHistory.push(action: .deleted, photoId: photo.id, photo: photo)
-            deleteManager.markForDeletion(photo)
-            sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
-            photoLoader.advance()
+            coordinator.record(.deleted, photo: photo)
         case .none:
             break
         }
-    }
-
-    // MARK: - Undo
-
-    func performUndo() {
-        guard let entry = swipeHistory.undo() else { return }
-        photoLoader.goBack()
-        if entry.action == .deleted {
-            _ = deleteManager.undoLast()
-        }
-    }
-
-    var canUndo: Bool {
-        swipeHistory.canUndo
     }
 }

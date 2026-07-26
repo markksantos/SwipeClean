@@ -3,12 +3,12 @@ import SwiftUI
 /// A scrollable panel showing all swipe decisions in the current session with per-item undo.
 struct HistoryPanelView: View {
     @ObservedObject var swipeHistory: SwipeHistory
-    @EnvironmentObject var deleteManager: DeleteManager
+    let coordinator: SwipeCoordinator
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if swipeHistory.entries.isEmpty {
                     emptyState
@@ -61,22 +61,9 @@ struct HistoryPanelView: View {
 
     private func historyRow(entry: SwipeHistoryEntry) -> some View {
         HStack(spacing: 12) {
-            // Thumbnail
-            if let thumbnail = entry.photo.thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(systemName: "photo")
-                            .foregroundStyle(.tertiary)
-                    }
-            }
+            AssetThumbnailView(asset: entry.photo.asset, side: 50)
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             // Info
             VStack(alignment: .leading, spacing: 4) {
@@ -90,7 +77,7 @@ struct HistoryPanelView: View {
 
             // Undo button
             Button {
-                toggleDecision(entry: entry)
+                coordinator.toggle(entry: entry)
             } label: {
                 Text(entry.action == .deleted ? "Restore" : "Delete")
                     .font(.caption.weight(.semibold))
@@ -129,21 +116,4 @@ struct HistoryPanelView: View {
         return formatter.string(from: date)
     }
 
-    // MARK: - Toggle Decision
-
-    private func toggleDecision(entry: SwipeHistoryEntry) {
-        let currentAction = entry.action
-
-        // Toggle the action in history
-        swipeHistory.toggleAction(for: entry.id)
-
-        // Update the delete manager accordingly
-        if currentAction == .deleted {
-            // Was deleted, now keeping -- remove from trash
-            deleteManager.removeFromTrash(photoId: entry.photoId)
-        } else {
-            // Was kept, now deleting -- add to trash
-            deleteManager.queueForDeletion(entry.photo)
-        }
-    }
 }

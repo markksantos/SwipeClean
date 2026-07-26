@@ -13,9 +13,11 @@ struct SessionCompleteView: View {
     @State private var showReviewGrid = false
     @State private var isDeleting = false
     @State private var deleteComplete = false
+    @State private var deleteError: String?
     @State private var animateStats = false
     @State private var confettiParticles: [ConfettiParticle] = []
     @State private var showConfetti = false
+    @State private var confettiStart = Date()
     @State private var earnedMilestones: [Milestone] = []
     @State private var showMilestoneCelebration = false
 
@@ -163,9 +165,20 @@ struct SessionCompleteView: View {
             // Delete Now
             Button {
                 isDeleting = true
-                deleteManager.executeQueuedDeletions { _ in
+                deleteError = nil
+                deleteManager.executeQueuedDeletions { result in
                     isDeleting = false
-                    deleteComplete = true
+                    // The result has to be honoured. iOS shows its own
+                    // confirmation for a batch delete, and declining it comes back
+                    // as a failure — this button used to latch to "Deleted" and
+                    // disable itself anyway, telling the user their photos were
+                    // gone when nothing had been touched.
+                    switch result {
+                    case .success:
+                        deleteComplete = true
+                    case .failure(let error):
+                        deleteError = error.localizedDescription
+                    }
                 }
             } label: {
                 HStack {
@@ -185,6 +198,14 @@ struct SessionCompleteView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(isDeleting || deleteComplete)
+
+            if let deleteError {
+                Text(deleteError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
 
             // Review Before Deleting
             Button {
@@ -243,63 +264,70 @@ struct SessionCompleteView: View {
     // MARK: - Confetti
 
     private func startConfetti() {
-        confettiParticles = (0..<25).map { _ in
+        confettiParticles = (0..<28).map { _ in
             ConfettiParticle(
-                x: CGFloat.random(in: 0...1),
-                delay: Double.random(in: 0...0.5),
+                x: CGFloat.random(in: 0.05...0.95),
+                delay: Double.random(in: 0...0.6),
                 color: [Color.red, .blue, .green, .yellow, .orange, .purple, .pink].randomElement()!,
-                size: CGFloat.random(in: 6...12)
+                size: CGFloat.random(in: 6...12),
+                drift: CGFloat.random(in: -1...1),
+                spin: Double.random(in: 1.5...3.5)
             )
         }
+        confettiStart = Date()
         showConfetti = true
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.confettiDuration) {
             showConfetti = false
         }
     }
 
+    /// Confetti is driven by `TimelineView(.animation)`, which asks for a new frame
+    /// every display refresh. The previous version drew from `Date()` inside a bare
+    /// `Canvas` and tried to force redraws with a `Timer` that only ever invalidated
+    /// itself — nothing invalidated the view, so the burst rendered as a single
+    /// frozen frame at a random point in its arc.
     private var confettiOverlay: some View {
-        Canvas { context, size in
-            let elapsed = Date().timeIntervalSinceReferenceDate
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let elapsed = timeline.date.timeIntervalSince(confettiStart)
 
-            for particle in confettiParticles {
-                let x = particle.x * size.width
-                let progress = min(1.0, max(0, (elapsed.truncatingRemainder(dividingBy: 3.0) - particle.delay) / 2.0))
-                let y = progress * size.height * 1.2 - 20
+                for particle in confettiParticles {
+                    let progress = (elapsed - particle.delay) / Self.confettiFallSeconds
+                    guard progress > 0, progress < 1 else { continue }
 
-                if progress > 0 {
-                    let rect = CGRect(
-                        x: x + sin(progress * .pi * 3) * 20,
-                        y: y,
-                        width: particle.size,
-                        height: particle.size
-                    )
+                    let x = particle.x * size.width + sin(progress * .pi * particle.spin) * 26 * particle.drift
+                    let y = progress * (size.height + 40) - 20
+                    let rect = CGRect(x: x, y: y, width: particle.size, height: particle.size)
+
                     context.fill(
                         Path(ellipseIn: rect),
-                        with: .color(particle.color.opacity(1.0 - progress))
+                        // Hold full opacity through most of the fall, then fade out
+                        // over the last third so pieces don't vanish mid-screen.
+                        with: .color(particle.color.opacity(min(1, (1 - progress) * 3)))
                     )
-                }
-            }
-        }
-        .onAppear {
-            // Force re-render via timer for animation
-            Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { timer in
-                if !showConfetti {
-                    timer.invalidate()
                 }
             }
         }
     }
+
+    private static let confettiFallSeconds: Double = 1.9
+    private static let confettiDuration: Double = 2.8
 }
 
 // MARK: - Confetti Particle
 
 struct ConfettiParticle: Identifiable {
     let id = UUID()
+    /// Horizontal start position as a fraction of the canvas width.
     let x: CGFloat
     let delay: Double
     let color: Color
     let size: CGFloat
+    /// Signed multiplier on the horizontal sway, so pieces don't move in lockstep.
+    let drift: CGFloat
+    /// Number of sway half-cycles over the fall.
+    let spin: Double
 }
 
 // MARK: - Deletion Preview Grid
@@ -319,16 +347,8 @@ struct DeletionPreviewGrid: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 2) {
                     ForEach(photos, id: \.id) { photo in
-                        if let image = photo.thumbnail ?? photo.fullImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipped()
-                        } else {
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .aspectRatio(1, contentMode: .fill)
-                        }
+                        AssetThumbnailView(asset: photo.asset)
+                            .aspectRatio(1, contentMode: .fill)
                     }
                 }
             }

@@ -27,14 +27,13 @@ struct ReviewGridView: View {
             "Rescue this photo?",
             isPresented: $showRescueConfirmation,
             presenting: rescueTarget
-        ) { _ in
+        ) { photo in
             Button("Rescue") {
-                if rescueTarget != nil {
-                    // Use undoLastDeletion or clearQueue -- for rescue we remove specific item.
-                    // Since DeleteManager only supports undoLast or clear, we'll use undo
-                    // repeatedly or accept the limitation.
-                    deleteManager.undoLastDeletion()
-                }
+                // Must target the photo the user long-pressed. Calling
+                // `undoLastDeletion()` here rescued whatever was queued most
+                // recently instead, so the tapped photo stayed queued and an
+                // unrelated one was silently spared.
+                deleteManager.removeFromTrash(photoId: photo.id)
             }
             Button("Cancel", role: .cancel) {}
         } message: { _ in
@@ -74,20 +73,8 @@ struct ReviewGridView: View {
         Button {
             selectedPhoto = photo
         } label: {
-            Rectangle()
-                .fill(Color(.tertiarySystemGroupedBackground))
+            AssetThumbnailView(asset: photo.asset)
                 .aspectRatio(1, contentMode: .fill)
-                .overlay {
-                    if let thumbnail = photo.thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: "photo")
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .clipped()
         }
         .buttonStyle(.plain)
         .onLongPressGesture {
@@ -100,11 +87,7 @@ struct ReviewGridView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                if let thumbnail = photo.thumbnail {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .scaledToFit()
-                }
+                AssetThumbnailView(asset: photo.asset, side: 1_000, fills: false)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -115,7 +98,7 @@ struct ReviewGridView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        deleteManager.undoLastDeletion()
+                        deleteManager.removeFromTrash(photoId: photo.id)
                         selectedPhoto = nil
                     } label: {
                         Label("Rescue", systemImage: "arrow.uturn.backward")

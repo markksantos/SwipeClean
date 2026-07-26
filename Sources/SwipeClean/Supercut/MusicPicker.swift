@@ -9,7 +9,6 @@ enum MusicSource: String, CaseIterable, Identifiable {
     case none
     case appleMusic
     case files
-    case pixabay
 
     var id: String { rawValue }
 
@@ -18,7 +17,6 @@ enum MusicSource: String, CaseIterable, Identifiable {
         case .none: return "No Music"
         case .appleMusic: return "Apple Music"
         case .files: return "From Files"
-        case .pixabay: return "Free Library"
         }
     }
 
@@ -27,30 +25,8 @@ enum MusicSource: String, CaseIterable, Identifiable {
         case .none: return "speaker.slash"
         case .appleMusic: return "music.note"
         case .files: return "folder"
-        case .pixabay: return "waveform"
         }
     }
-}
-
-// MARK: - PixabayTrack
-
-struct PixabayTrack: Identifiable, Codable {
-    let id: Int
-    let title: String
-    let duration: Int       // seconds
-    let audioURL: String    // download URL (from "audio" field)
-    let tags: String
-
-    enum CodingKeys: String, CodingKey {
-        case id, title, duration, tags
-        case audioURL = "audio"
-    }
-}
-
-// MARK: - Pixabay API Response
-
-private struct PixabayMusicResponse: Codable {
-    let hits: [PixabayTrack]
 }
 
 // MARK: - MusicPickerModel
@@ -59,91 +35,8 @@ final class MusicPickerModel: ObservableObject {
     @Published var selectedSource: MusicSource = .none
     @Published var selectedTrackURL: URL?
     @Published var selectedTrackName: String?
-    @Published var pixabayTracks: [PixabayTrack] = []
-    @Published var isLoadingTracks = false
-
-    /// Pixabay API key, read from the app's Info.plist (`PixabayAPIKey`), which
-    /// is populated from the `PIXABAY_API_KEY` build setting (see Secrets.xcconfig).
-    /// Returns nil when no key is configured so the UI can degrade gracefully
-    /// instead of firing a request that always 400s.
-    static var pixabayAPIKey: String? {
-        guard let raw = Bundle.main.object(forInfoDictionaryKey: "PixabayAPIKey") as? String else {
-            return nil
-        }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty || trimmed == "YOUR_PIXABAY_API_KEY" || trimmed == "$(PIXABAY_API_KEY)" {
-            return nil
-        }
-        return trimmed
-    }
-
-    /// Whether a usable Pixabay key is configured.
-    var isPixabayConfigured: Bool { Self.pixabayAPIKey != nil }
-
-    @Published var pixabayError: String?
 
     private var audioPlayer: AVAudioPlayer?
-
-    // MARK: - Pixabay
-
-    /// Fetch tracks from the Pixabay music API.
-    func fetchPixabayTracks(query: String = "upbeat") async {
-        guard let key = Self.pixabayAPIKey else {
-            await MainActor.run {
-                pixabayError = "Free music isn't set up. Add a Pixabay API key to enable it, or pick a song from Apple Music or Files."
-                pixabayTracks = []
-            }
-            return
-        }
-
-        await MainActor.run {
-            isLoadingTracks = true
-            pixabayError = nil
-        }
-        defer { Task { @MainActor in isLoadingTracks = false } }
-
-        let sanitized = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        guard let url = URL(string: "https://pixabay.com/api/?key=\(key)&q=\(sanitized)&category=music") else { return }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                await MainActor.run {
-                    pixabayError = http.statusCode == 400
-                        ? "The Pixabay API key looks invalid."
-                        : "Couldn't load free music (HTTP \(http.statusCode))."
-                    pixabayTracks = []
-                }
-                return
-            }
-            let decoded = try JSONDecoder().decode(PixabayMusicResponse.self, from: data)
-            await MainActor.run { pixabayTracks = decoded.hits }
-        } catch {
-            await MainActor.run {
-                pixabayError = "Couldn't load free music. Check your connection and try again."
-            }
-        }
-    }
-
-    /// Download a Pixabay track to a temp file and set selectedTrackURL.
-    func downloadTrack(_ track: PixabayTrack) async {
-        guard let remoteURL = URL(string: track.audioURL) else { return }
-
-        do {
-            let (tempURL, _) = try await URLSession.shared.download(from: remoteURL)
-            let dest = FileManager.default.temporaryDirectory.appendingPathComponent("\(track.id).mp3")
-            try? FileManager.default.removeItem(at: dest)
-            try FileManager.default.moveItem(at: tempURL, to: dest)
-
-            await MainActor.run {
-                selectedTrackURL = dest
-                selectedTrackName = track.title
-                selectedSource = .pixabay
-            }
-        } catch {
-            print("Download error: \(error)")
-        }
-    }
 
     // MARK: - Preview Playback
 
@@ -198,7 +91,6 @@ struct MusicPickerView: View {
     @ObservedObject var model: MusicPickerModel
     @Environment(\.dismiss) var dismiss
 
-    @State private var searchQuery = "upbeat"
     @State private var showAppleMusicPicker = false
     @State private var showFilePicker = false
 
@@ -226,8 +118,6 @@ struct MusicPickerView: View {
                         appleMusicView
                     case .files:
                         filesView
-                    case .pixabay:
-                        pixabayView
                     }
                 }
                 .frame(maxHeight: .infinity)
@@ -316,106 +206,6 @@ struct MusicPickerView: View {
         }
     }
 
-    // MARK: - Pixabay
-
-    private var pixabayView: some View {
-        VStack(spacing: 0) {
-            HStack {
-                TextField("Search free music...", text: $searchQuery)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!model.isPixabayConfigured)
-                Button("Search") {
-                    Task { await model.fetchPixabayTracks(query: searchQuery) }
-                }
-                .buttonStyle(.bordered)
-                .disabled(!model.isPixabayConfigured)
-            }
-            .padding()
-
-            if !model.isPixabayConfigured {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "waveform.slash")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                    Text("Free Library not configured")
-                        .font(.headline)
-                    Text("Add a Pixabay API key to enable royalty-free music, or pick a song from Apple Music or Files.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
-                Spacer()
-            } else if let error = model.pixabayError {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundStyle(.orange)
-                    Text(error)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
-                Spacer()
-            } else if model.isLoadingTracks {
-                Spacer()
-                ProgressView("Loading tracks...")
-                Spacer()
-            } else if model.pixabayTracks.isEmpty {
-                Spacer()
-                Text("Search for free music tracks")
-                    .foregroundStyle(.secondary)
-                Spacer()
-            } else {
-                List(model.pixabayTracks) { track in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(track.title)
-                                .font(.body.weight(.medium))
-                                .lineLimit(1)
-                            Text(formatDuration(track.duration))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        // Preview button
-                        Button {
-                            if let url = URL(string: track.audioURL) {
-                                model.previewTrack(url: url)
-                            }
-                        } label: {
-                            Image(systemName: "play.circle")
-                                .font(.title2)
-                        }
-                        .buttonStyle(.plain)
-
-                        // Select button
-                        Button("Select") {
-                            Task { await model.downloadTrack(track) }
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .listStyle(.plain)
-            }
-        }
-        .onAppear {
-            if model.pixabayTracks.isEmpty {
-                Task { await model.fetchPixabayTracks(query: searchQuery) }
-            }
-        }
-        .onDisappear {
-            model.stopPreview()
-        }
-    }
-
     // MARK: - Helpers
 
     private func selectedTrackRow(name: String) -> some View {
@@ -437,11 +227,6 @@ struct MusicPickerView: View {
         .padding(.horizontal)
     }
 
-    private func formatDuration(_ seconds: Int) -> String {
-        let m = seconds / 60
-        let s = seconds % 60
-        return String(format: "%d:%02d", m, s)
-    }
 }
 
 // MARK: - Apple Music Picker (UIViewControllerRepresentable)

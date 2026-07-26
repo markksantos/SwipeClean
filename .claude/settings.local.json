@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *.xcodeproj/project.pbxproj)",
+      "Bash(ls *.xcworkspace)",
+      "Bash(ls:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(xcodebuild -project SwipeClean.xcodeproj -scheme SwipeClean -destination 'platform=iOS Simulator,id=C180378D-3C1F-4228-A1B6-F6CD8B4BDB7F' -derivedDataPath build)",
+      "Bash(xcodebuild:*)",
+      "Bash(open -a Simulator)",
+      "Bash(done)",
+      "Bash(cp .claude/worktrees/agent-a8510fad/Sources/SwipeClean/Views/Swipe/SessionCompleteView.swift Sources/SwipeClean/Views/Swipe/)",
+      "Bash(cp .claude/worktrees/agent-a8510fad/Sources/SwipeClean/Views/Home/StatsCard.swift Sources/SwipeClean/Views/Home/)",
+      "Bash(cp .claude/worktrees/agent-a8510fad/Sources/SwipeClean/App/SwipeCleanApp.swift Sources/SwipeClean/App/)",
+      "Bash(awk '/PBXSourcesBuildPhase/,/End PBXSourcesBuildPhase/' SwipeClean.xcodeproj/project.pbxproj)",
+      "Bash(python3:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

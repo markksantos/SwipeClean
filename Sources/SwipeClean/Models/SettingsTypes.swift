@@ -48,6 +48,11 @@ enum SwipeSensitivity: String, CaseIterable, Identifiable {
     }
 }
 
+extension Optional where Wrapped == SwipeSensitivity {
+    /// `.medium` when nothing has been chosen yet or the stored value is unknown.
+    var defaulted: SwipeSensitivity { self ?? .medium }
+}
+
 // MARK: - Card Style
 
 enum CardStyle: String, CaseIterable, Identifiable {
@@ -99,7 +104,6 @@ enum SettingsKeys {
     static let hapticFeedback = "settings_haptic_feedback"
     static let autoPlayVideos = "settings_auto_play_videos"
     static let cardStyle = "settings_card_style"
-    static let permanentDelete = "settings_permanent_delete"
     static let cleanupReminders = "settings_cleanup_reminders"
     static let reminderFrequency = "settings_reminder_frequency"
 }

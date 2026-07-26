@@ -2,6 +2,7 @@ import SwiftUI
 import Photos
 
 struct HomeView: View {
+    @EnvironmentObject private var permissionManager: PermissionManager
     @EnvironmentObject private var albumProvider: AlbumProvider
     @EnvironmentObject private var sessionTracker: SessionTracker
     @EnvironmentObject private var deleteManager: DeleteManager
@@ -63,6 +64,11 @@ struct HomeView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+                    }
+
+                    // Only visible when the user shared a subset of their library.
+                    if permissionManager.isLimited {
+                        LimitedAccessBanner()
                     }
 
                     // Hero stats card
@@ -334,6 +340,11 @@ struct HomeView: View {
             // Fetch sources on a background queue (publishes on main internally)
             albumProvider.fetchAvailableSourcesAsync()
             withAnimation { cardsVisible = true }
+        }
+        .onReceive(permissionManager.libraryDidChange) { _ in
+            // Covers deletions made elsewhere and, importantly, the user adding
+            // or removing photos from a limited-access selection.
+            albumProvider.fetchAvailableSourcesAsync()
         }
     }
 

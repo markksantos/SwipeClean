@@ -8,7 +8,7 @@
 	<string>SwipeClean needs access to save photos to your library.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>SwipeClean uses your music library so you can add a song to your supercut videos.</string>
-	<key>PixabayAPIKey</key>
-	<string>$(PIXABAY_API_KEY)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

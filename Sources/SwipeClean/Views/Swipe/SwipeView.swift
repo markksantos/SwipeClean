@@ -24,6 +24,17 @@ struct SwipeView: View {
     var albumName: String = "All Photos"
     var albumSource: AlbumSource = .allPhotos
 
+    /// Every keep/delete/undo goes through here so the deck, the queue, and the
+    /// session counters can never be updated in only some of the places.
+    private var coordinator: SwipeCoordinator {
+        SwipeCoordinator(
+            photoLoader: photoLoader,
+            deleteManager: deleteManager,
+            sessionTracker: sessionTracker,
+            swipeHistory: swipeHistory
+        )
+    }
+
     var body: some View {
         ZStack {
             Color(.systemBackground)
@@ -73,8 +84,7 @@ struct SwipeView: View {
                 .environmentObject(sessionTracker)
         }
         .sheet(isPresented: $showHistoryPanel) {
-            HistoryPanelView(swipeHistory: swipeHistory)
-                .environmentObject(deleteManager)
+            HistoryPanelView(swipeHistory: swipeHistory, coordinator: coordinator)
         }
         .onAppear {
             if photoLoader.totalCount == 0 {
@@ -82,15 +92,11 @@ struct SwipeView: View {
             }
             sessionTracker.startSession()
 
-            let sensitivity = UserDefaults.standard.string(forKey: "settings_swipe_sensitivity") ?? "medium"
-            switch sensitivity {
-            case "low":
-                swipeThreshold = 160
-            case "high":
-                swipeThreshold = 80
-            default:
-                swipeThreshold = 120
-            }
+            // Read the threshold off SwipeSensitivity rather than re-deriving it
+            // from a raw string here, so the settings screen and the gesture
+            // cannot disagree about what "High" means.
+            let stored = UserDefaults.standard.string(forKey: SettingsKeys.swipeSensitivity)
+            swipeThreshold = SwipeSensitivity(rawValue: stored ?? "").defaulted.threshold
         }
         .onChange(of: photoLoader.currentPhoto == nil) { isNil in
             if isNil && photoLoader.currentIndex >= photoLoader.totalCount && photoLoader.totalCount > 0 {
@@ -217,10 +223,9 @@ struct SwipeView: View {
                         detailPhoto = photo
                         showDetail = true
                     },
-                    swipeHistory: swipeHistory
+                    coordinator: coordinator
                 )
                 .environmentObject(photoLoader)
-                .environmentObject(deleteManager)
             }
         }
         .environmentObject(sessionTracker)
@@ -261,10 +266,7 @@ struct SwipeView: View {
             // Delete button
             Button {
                 if let photo = photoLoader.currentPhoto {
-                    swipeHistory.push(action: .deleted, photoId: photo.id, photo: photo)
-                    deleteManager.markForDeletion(photo)
-                    sessionTracker.recordReview(kept: false, fileSize: photo.fileSize)
-                    photoLoader.advance()
+                    coordinator.record(.deleted, photo: photo)
                 }
             } label: {
                 Image(systemName: "xmark")
@@ -280,11 +282,7 @@ struct SwipeView: View {
             VStack(spacing: 8) {
                 // Undo button (only visible when available)
                 Button {
-                    guard let entry = swipeHistory.undo() else { return }
-                    photoLoader.goBack()
-                    if entry.action == .deleted {
-                        _ = deleteManager.undoLast()
-                    }
+                    coordinator.undo()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.system(size: 18, weight: .semibold))
@@ -318,10 +316,8 @@ struct SwipeView: View {
             // Keep button
             Button {
                 if let photo = photoLoader.currentPhoto {
-                    swipeHistory.push(action: .kept, photoId: photo.id, photo: photo)
-                    sessionTracker.recordReview(kept: true, fileSize: photo.fileSize)
+                    coordinator.record(.kept, photo: photo)
                 }
-                photoLoader.advance()
             } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 28, weight: .bold))

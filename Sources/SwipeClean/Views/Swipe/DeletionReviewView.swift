@@ -32,20 +32,25 @@ struct DeletionReviewView: View {
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))
 
+                // Be explicit about where the photos actually go. iOS routes every
+                // PhotoKit deletion through Recently Deleted and there is no API to
+                // bypass it, so promising anything stronger would be a lie.
+                Label(
+                    "These move to Recently Deleted in the Photos app. iOS keeps them for 30 days so you can get them back.",
+                    systemImage: "clock.arrow.circlepath"
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
                 // Photo grid
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 2) {
                         ForEach(deleteManager.trashQueue, id: \.id) { photo in
-                            if let image = photo.thumbnail ?? photo.fullImage {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .aspectRatio(1, contentMode: .fill)
-                                    .clipped()
-                            } else {
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .aspectRatio(1, contentMode: .fill)
-                            }
+                            AssetThumbnailView(asset: photo.asset)
+                                .aspectRatio(1, contentMode: .fill)
                         }
                     }
                 }

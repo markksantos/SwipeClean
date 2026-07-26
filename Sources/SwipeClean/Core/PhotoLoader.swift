@@ -21,17 +21,22 @@ final class PhotoLoader: ObservableObject {
     /// The number of items currently held in the active window (for testing).
     var activeWindowSize: Int { activeWindow.count }
 
+    /// How many items are currently holding a decoded image (for testing).
+    var decodedImageCount: Int { decodedItems.count }
+
     // MARK: - Configuration
 
     static let windowSize = 20
     static let preloadCount = 3
     static let thumbnailSize = CGSize(width: 600, height: 600)
 
-    /// Screen-sized image (1x scale — sharp enough, not wastefully large)
-    var displayImageSize: CGSize {
-        let bounds = UIScreen.main.bounds
-        return CGSize(width: bounds.width, height: bounds.height)
-    }
+    /// Card-sized image in *pixels*, resolved once at init.
+    ///
+    /// PhotoKit measures `targetSize` in pixels, so passing point dimensions asks
+    /// for a third of the resolution the card actually draws at and the photo
+    /// lands visibly soft on a 3x display. Capped at 2x because the card never
+    /// fills the whole screen and 3x of a 6.9" panel is ~11MP per decoded image.
+    let displayImageSize: CGSize
 
     // MARK: - Private State
 
@@ -40,6 +45,9 @@ final class PhotoLoader: ObservableObject {
     private var allItems: [PhotoItem] = []
     private var activeWindow: [PhotoItem] = []
     private var activeRequestIDs: [String: Set<PHImageRequestID>] = [:]
+    /// Items currently holding a decoded `UIImage`, so `pruneOutsideWindow()` can
+    /// release them without scanning the entire album.
+    private var decodedItems: [PhotoItem] = []
 
     // MARK: - Init
 
@@ -49,17 +57,54 @@ final class PhotoLoader: ObservableObject {
     ) {
         self.imageLoader = imageLoader
         self.assetFetcher = assetFetcher
+        self.displayImageSize = Self.resolveDisplayImageSize()
+    }
+
+    /// Measures the window the app is actually in. `UIScreen.main` is deprecated
+    /// and reports the full display rather than the app's share of it in Split
+    /// View, so this walks the connected scenes and falls back to 6.9" @3x when
+    /// there is no scene at all (unit tests).
+    private static func resolveDisplayImageSize() -> CGSize {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+            ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+
+        let bounds = (scene?.windows.first { $0.isKeyWindow } ?? scene?.windows.first)?.bounds.size
+            ?? CGSize(width: 440, height: 956)
+        let scale = min(scene?.screen.scale ?? 3, 2)
+
+        return CGSize(width: bounds.width * scale, height: bounds.height * scale)
     }
 
     // MARK: - Public API
 
     /// Loads items directly (used in tests and when items are pre-created).
     func loadItems(_ items: [PhotoItem]) {
+        // Switching albums abandons the previous item list, so drop its decoded
+        // images and in-flight requests rather than letting them outlive it.
+        releaseAllDecodedImages()
+
         allItems = items
         totalCount = items.count
         currentIndex = 0
         rebuildWindow()
         preloadAround(currentIndex)
+    }
+
+    private func releaseAllDecodedImages() {
+        for requestIDs in activeRequestIDs.values {
+            for requestID in requestIDs {
+                imageLoader.cancelImageRequest(requestID)
+            }
+        }
+        activeRequestIDs.removeAll()
+
+        for item in decodedItems {
+            item.thumbnail = nil
+            item.fullImage = nil
+        }
+        decodedItems.removeAll()
     }
 
     /// Fetches photos from the given album source and loads them.
@@ -127,12 +172,15 @@ final class PhotoLoader: ObservableObject {
             currentIndex = totalCount
             currentPhoto = nil
             upcomingPhotos = []
+            pruneOutsideWindow()
             return
         }
 
-        cancelRequestsOutsideWindow()
         currentIndex += 1
         rebuildWindow()
+        // Prune *after* moving, so the window being pruned against is the one we
+        // just moved into rather than the one we left.
+        pruneOutsideWindow()
         preloadAround(currentIndex)
     }
 
@@ -141,6 +189,7 @@ final class PhotoLoader: ObservableObject {
         guard currentIndex > 0 else { return }
         currentIndex -= 1
         rebuildWindow()
+        pruneOutsideWindow()
         preloadAround(currentIndex)
     }
 
@@ -151,6 +200,15 @@ final class PhotoLoader: ObservableObject {
 
     // MARK: - Sliding Window
 
+    /// Index range of items allowed to hold decoded images and in-flight requests.
+    private var windowRange: Range<Int> {
+        guard totalCount > 0 else { return 0..<0 }
+        let halfWindow = Self.windowSize / 2
+        let start = max(0, min(currentIndex, totalCount) - halfWindow)
+        let end = min(totalCount, currentIndex + halfWindow)
+        return start..<max(start, end)
+    }
+
     private func rebuildWindow() {
         guard !allItems.isEmpty, currentIndex < totalCount else {
             activeWindow = []
@@ -159,10 +217,7 @@ final class PhotoLoader: ObservableObject {
             return
         }
 
-        let halfWindow = Self.windowSize / 2
-        let windowStart = max(0, currentIndex - halfWindow)
-        let windowEnd = min(totalCount, currentIndex + halfWindow)
-        activeWindow = Array(allItems[windowStart..<windowEnd])
+        activeWindow = Array(allItems[windowRange])
 
         currentPhoto = allItems[currentIndex]
 
@@ -214,9 +269,8 @@ final class PhotoLoader: ObservableObject {
             options: options
         ) { [weak self, weak item] image, _ in
             DispatchQueue.main.async {
-                guard let image = image, let item = item else { return }
-                item.fullImage = image
-                self?.objectWillChange.send()
+                guard let image, let item else { return }
+                self?.store(image, on: item, keyPath: \.fullImage)
             }
         }
         trackRequest(requestID, for: item.id)
@@ -238,12 +292,29 @@ final class PhotoLoader: ObservableObject {
             options: options
         ) { [weak self, weak item] image, _ in
             DispatchQueue.main.async {
-                guard let image = image, let item = item else { return }
-                item.thumbnail = image
-                self?.objectWillChange.send()
+                guard let image, let item else { return }
+                self?.store(image, on: item, keyPath: \.thumbnail)
             }
         }
         trackRequest(requestID, for: item.id)
+    }
+
+    /// Stores a decoded image on an item and republishes.
+    ///
+    /// `PhotoItem` is a reference type held inside `@Published` arrays, so
+    /// mutating it does not itself invalidate any view — the change has to be
+    /// announced by hand, and `objectWillChange` has to fire *before* the write
+    /// for SwiftUI to pick up the new value in the same update.
+    func store(
+        _ image: UIImage,
+        on item: PhotoItem,
+        keyPath: ReferenceWritableKeyPath<PhotoItem, UIImage?>
+    ) {
+        objectWillChange.send()
+        item[keyPath: keyPath] = image
+        if !decodedItems.contains(where: { $0 === item }) {
+            decodedItems.append(item)
+        }
     }
 
     // MARK: - Request Tracking
@@ -255,26 +326,33 @@ final class PhotoLoader: ObservableObject {
         activeRequestIDs[itemID]?.insert(requestID)
     }
 
-    // MARK: - Cancellation
+    // MARK: - Window Pruning
 
-    private func cancelRequestsOutsideWindow() {
-        let halfWindow = Self.windowSize / 2
-        let windowStart = max(0, currentIndex - halfWindow)
-        let windowEnd = min(totalCount, currentIndex + halfWindow)
+    /// Cancels in-flight requests **and releases decoded images** for every item
+    /// outside the active window.
+    ///
+    /// `allItems` holds one `PhotoItem` per asset in the album — tens of thousands
+    /// on a real library — and `PhotoItem` is a class, so a screen-sized
+    /// `UIImage` assigned during review stays alive for the whole session unless
+    /// it is explicitly dropped. Without this the app grows by a few megabytes
+    /// per swipe and gets jetsammed after a few hundred cards.
+    private func pruneOutsideWindow() {
+        let window = windowRange
+        let windowIDs = Set(allItems[window].map(\.id))
 
-        let windowIDs = Set((windowStart..<windowEnd).map { allItems[$0].id })
-        var toRemove: [String] = []
-
-        for (itemID, requestIDs) in activeRequestIDs {
-            if !windowIDs.contains(itemID) {
-                for requestID in requestIDs {
-                    imageLoader.cancelImageRequest(requestID)
-                }
-                toRemove.append(itemID)
+        for (itemID, requestIDs) in activeRequestIDs where !windowIDs.contains(itemID) {
+            for requestID in requestIDs {
+                imageLoader.cancelImageRequest(requestID)
             }
+            activeRequestIDs.removeValue(forKey: itemID)
         }
-        for id in toRemove {
-            activeRequestIDs.removeValue(forKey: id)
+
+        // Walk only the items known to be holding images rather than the whole
+        // album, so the cost of a swipe stays flat as the library grows.
+        for item in decodedItems where !windowIDs.contains(item.id) {
+            item.thumbnail = nil
+            item.fullImage = nil
         }
+        decodedItems.removeAll { !windowIDs.contains($0.id) }
     }
 }

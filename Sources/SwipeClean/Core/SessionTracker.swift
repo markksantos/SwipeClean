@@ -94,13 +94,26 @@ final class SessionTracker: ObservableObject {
         }
     }
 
-    /// Undoes the last delete record (called alongside DeleteManager.undo).
-    func undoLastDelete(fileSize: Int64) {
-        guard sessionStats.photosDeleted > 0 else { return }
-        sessionStats.photosDeleted -= 1
+    /// Rolls back a recorded review.
+    ///
+    /// Every undo has to reach this method. `endSession()` persists the session
+    /// counters into the lifetime totals that drive the achievements screen, so an
+    /// undo that only rewinds the deck leaves both the "photos cleaned" figure and
+    /// the storage-freed figure permanently overstated.
+    func undoReview(kept: Bool, fileSize: Int64) {
+        guard sessionStats.photosReviewed > 0 else { return }
+
+        if kept {
+            guard sessionStats.photosKept > 0 else { return }
+            sessionStats.photosKept -= 1
+        } else {
+            guard sessionStats.photosDeleted > 0 else { return }
+            sessionStats.photosDeleted -= 1
+            sessionStats.storageFreed = max(0, sessionStats.storageFreed - fileSize)
+            currentStreak = max(0, currentStreak - 1)
+        }
+
         sessionStats.photosReviewed -= 1
-        sessionStats.storageFreed -= fileSize
-        currentStreak = max(0, currentStreak - 1)
     }
 
     /// Ends the session and persists stats to lifetime totals.

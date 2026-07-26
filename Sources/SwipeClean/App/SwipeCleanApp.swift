@@ -16,13 +16,17 @@ struct SwipeCleanApp: App {
                 OnboardingView(hasSeenOnboarding: $hasSeenOnboarding)
                     .environmentObject(permissionManager)
             } else {
-                HomeView()
-                    .environmentObject(permissionManager)
-                    .environmentObject(sessionTracker)
-                    .environmentObject(albumProvider)
-                    .environmentObject(deleteManager)
-                    .environmentObject(streakManager)
-                    .environmentObject(milestoneTracker)
+                // Everything past onboarding needs a usable photo library, so the
+                // gate decides between the real UI and an explanatory screen.
+                PhotoAccessGate {
+                    HomeView()
+                }
+                .environmentObject(permissionManager)
+                .environmentObject(sessionTracker)
+                .environmentObject(albumProvider)
+                .environmentObject(deleteManager)
+                .environmentObject(streakManager)
+                .environmentObject(milestoneTracker)
             }
         }
     }

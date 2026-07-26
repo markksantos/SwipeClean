@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject private var sessionTracker: SessionTracker
@@ -13,7 +14,6 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.hapticFeedback) private var hapticFeedback: Bool = true
     @AppStorage(SettingsKeys.autoPlayVideos) private var autoPlayVideos: Bool = false
     @AppStorage(SettingsKeys.cardStyle) private var cardStyle: String = CardStyle.rounded.rawValue
-    @AppStorage(SettingsKeys.permanentDelete) private var permanentDelete: Bool = false
     @AppStorage(SettingsKeys.cleanupReminders) private var cleanupReminders: Bool = false
     @AppStorage(SettingsKeys.reminderFrequency) private var reminderFrequency: String = ReminderFrequency.weekly.rawValue
 
@@ -24,6 +24,16 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
+    }
+
+    /// Asks StoreKit for the system rating prompt. iOS rate-limits this, so it
+    /// may be a no-op — which is still better than a dead App Store link.
+    private func requestAppReview() {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive })
+        else { return }
+        SKStoreReviewController.requestReview(in: scene)
     }
 
     var body: some View {
@@ -55,13 +65,11 @@ struct SettingsView: View {
 
                 // MARK: - Deletion
                 Section {
-                    Toggle("Delete permanently", isOn: $permanentDelete)
+                    LabeledContent("Deleted photos go to", value: "Recently Deleted")
                 } header: {
                     Text("Deletion")
                 } footer: {
-                    Text(permanentDelete
-                         ? "Photos will be permanently deleted and cannot be recovered."
-                         : "Photos will be moved to Recently Deleted where you can recover them for 30 days.")
+                    Text("SwipeClean never deletes anything until you confirm. Confirmed photos move to the Photos app's Recently Deleted album, where iOS keeps them for 30 days so you can recover them. To free the space immediately, empty Recently Deleted in the Photos app.")
                 }
 
                 // MARK: - Appearance
@@ -159,16 +167,24 @@ struct SettingsView: View {
                     LabeledContent("Version", value: appVersion)
                     LabeledContent("Made by", value: "NoSleepLab")
 
-                    if let rateURL = URL(string: "https://apps.apple.com/app/idXXXXXXXXXX?action=write-review") {
-                        Link(destination: rateURL) {
-                            Label("Rate SwipeClean", systemImage: "star")
-                        }
+                    // Uses the system review prompt rather than a hardcoded App
+                    // Store URL, so there is no placeholder ID to go stale.
+                    Button {
+                        requestAppReview()
+                    } label: {
+                        Label("Rate SwipeClean", systemImage: "star")
                     }
 
-                    if let privacyURL = URL(string: "https://nosleeplab.com/privacy") {
-                        Link(destination: privacyURL) {
-                            Label("Privacy Policy", systemImage: "hand.raised")
-                        }
+                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/privacy")!) {
+                        Label("Privacy Policy", systemImage: "hand.raised")
+                    }
+
+                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/terms")!) {
+                        Label("Terms of Use", systemImage: "doc.text")
+                    }
+
+                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/support")!) {
+                        Label("Support", systemImage: "questionmark.circle")
                     }
                 } header: {
                     Text("About")

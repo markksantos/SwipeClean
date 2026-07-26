@@ -248,3 +248,53 @@ What remains (the last ~5%, all owner-gated or device-only):
 - Optional polish: a couple of `.onChange(of:)` call sites use the iOS 16
   single-parameter API (correct for the 16.0 deployment target; would warn only
   if the deployment target is later raised).
+
+---
+
+## QA Verification
+
+**Reviewer:** independent QA subagent (claude-sonnet-4-6), 2026-05-31
+
+### Commands run
+
+```
+# Build (via XcodeBuildMCP → xcodebuild)
+scheme=SwipeClean, project=SwipeClean.xcodeproj
+destination: iOS Simulator — iPhone 17 Pro (0E199CCD-9BA6-49E2-B4B5-9F808C2C0F43)
+→ BUILD SUCCEEDED, 0 warnings, 0 errors (7.0 s)
+
+# Tests
+→ TEST SUCCEEDED, 109 passed, 0 failed, 0 skipped (5.1 s)
+```
+
+### Claim-by-claim verification
+
+| Claim | Verified? | Notes |
+|---|---|---|
+| Build succeeds, zero warnings | CONFIRMED | Independent build via XcodeBuildMCP, 0 diagnostics |
+| 109/109 tests pass | CONFIRMED | All 109 test cases pass; xcresult clean |
+| Supercut `generateSupercut()` wired end-to-end (was TODO stub) | CONFIRMED | `SupercutSettingsView.swift` is 328 lines with full pipeline: asset fetch → Vision scoring → render-image load → `composer.compose()` → fullScreenCover phase machine |
+| App icon present (1024x1024 opaque) | CONFIRMED | `AppIcon-1024.png` is 418 KB; `Contents.json` correctly wired |
+| Live Photo playback added | CONFIRMED | `PhotoDetailOverlay.swift` contains `LivePhotoPlayer` (`PHLivePhotoView` via `UIViewRepresentable`), LIVE badge, and touch-and-hold hint |
+| Pixabay key moved to Info.plist / build setting | CONFIRMED | `Info.plist` has `PixabayAPIKey = $(PIXABAY_API_KEY)`; `MusicPickerModel.pixabayAPIKey` reads from bundle and returns nil for empty/placeholder values |
+| `Secrets.xcconfig` gitignored | CONFIRMED | Listed in `.gitignore`; not in `git ls-files` output |
+| `DeleteManager` marked `@MainActor` | CONFIRMED | Lines 5, 120, 145 of `DeleteManager.swift` |
+| `UserInterfaceState.xcuserstate` no longer tracked | CONFIRMED | Not in `git ls-files`; `*.xcworkspace/xcuserdata/` is in `.gitignore` |
+| 2 commits this session | CONFIRMED | `6081d6c` (feature work) + `2375308` (worklog) |
+| No secrets committed | CONFIRMED | `Secrets.xcconfig` gitignored; only `Secrets.example.xcconfig` (empty key) tracked |
+| No TODO/FIXME stubs remain in source | CONFIRMED | `grep -r "TODO\|FIXME"` across all `.swift` files returns nothing |
+
+### Discrepancies found
+
+None. All claims check out. The worklog is accurate.
+
+### Fixes applied by QA
+
+None required.
+
+### Remaining issues (carry-forward, not regressions)
+
+- On-device validation of Supercut render and PhotoKit deletion requires Apple signing cert + physical device.
+- App Store Connect setup (bundle id registration, screenshots, privacy labels) is owner-gated.
+- Pixabay API key is optional; app degrades gracefully without it.
+- `Secrets.xcconfig` exists locally with an empty key (correct; gitignored).

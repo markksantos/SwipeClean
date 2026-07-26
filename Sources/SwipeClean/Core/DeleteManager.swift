@@ -8,8 +8,6 @@ final class DeleteManager: ObservableObject {
     // MARK: - Public State
 
     @Published private(set) var trashQueue: [PhotoItem] = []
-    @Published private(set) var photosReviewed: Int = 0
-    @Published private(set) var photosKept: Int = 0
 
     var photosDeleted: Int { trashQueue.count }
 
@@ -17,12 +15,6 @@ final class DeleteManager: ObservableObject {
     var queuedStorageBytes: Int64 {
         trashQueue.reduce(0) { $0 + $1.fileSize }
     }
-
-    /// Alias used by session complete view.
-    var storageFreed: Int64 { queuedStorageBytes }
-
-    /// Whether the last action can be undone.
-    var canUndo: Bool { !trashQueue.isEmpty }
 
     // MARK: - Private
 
@@ -37,20 +29,12 @@ final class DeleteManager: ObservableObject {
     // MARK: - Queue Operations
 
     /// Adds a photo to the trash queue without deleting it.
+    ///
+    /// Review counts deliberately live only on `SessionTracker`. This type used
+    /// to keep its own `photosReviewed`/`photosKept` pair that no screen read and
+    /// that only some call sites incremented, so the two disagreed by design.
     func queueForDeletion(_ item: PhotoItem) {
         trashQueue.append(item)
-    }
-
-    /// Alias for queueForDeletion — used by swipe views.
-    func markForDeletion(_ item: PhotoItem) {
-        photosReviewed += 1
-        queueForDeletion(item)
-    }
-
-    /// Records a kept photo (swipe right).
-    func recordKept() {
-        photosReviewed += 1
-        photosKept += 1
     }
 
     /// Removes the most recently queued item and returns it (for undo).
@@ -59,12 +43,6 @@ final class DeleteManager: ObservableObject {
     func undoLastDeletion() -> PhotoItem? {
         guard !trashQueue.isEmpty else { return nil }
         return trashQueue.removeLast()
-    }
-
-    /// Alias for undoLastDeletion — used by swipe views.
-    @discardableResult
-    func undoLast() -> PhotoItem? {
-        undoLastDeletion()
     }
 
     /// Removes a specific photo from the trash queue by ID.
@@ -81,10 +59,8 @@ final class DeleteManager: ObservableObject {
         trashQueue.removeAll()
     }
 
-    /// Resets session counters.
+    /// Resets the queue for a new session.
     func resetSession() {
-        photosReviewed = 0
-        photosKept = 0
         trashQueue.removeAll()
     }
 
@@ -103,11 +79,7 @@ final class DeleteManager: ObservableObject {
         // contribute nothing to the change request but are still cleared from
         // the queue on success.
         let assets = itemsToDelete.compactMap { $0.asset }
-        let count = itemsToDelete.count
-
-        let permanentDelete = UserDefaults.standard.bool(forKey: SettingsKeys.permanentDelete)
-
-        let assetIDs = assets.map { $0.localIdentifier }
+        let submittedIDs = Set(itemsToDelete.map(\.id))
 
         photoLibrary.performChanges({
             // Only issue the delete request when there are real assets. An empty
@@ -121,9 +93,7 @@ final class DeleteManager: ObservableObject {
                 self?.finishDeletion(
                     success: success,
                     error: error,
-                    count: count,
-                    permanentDelete: permanentDelete,
-                    assetIDs: assetIDs,
+                    submittedIDs: submittedIDs,
                     completion: completion
                 )
             }
@@ -132,25 +102,23 @@ final class DeleteManager: ObservableObject {
 
     /// Main-actor continuation of `executeQueuedDeletions` once the library
     /// reports the result of the change request.
+    ///
+    /// Deleted assets always land in the system "Recently Deleted" album for 30
+    /// days. PhotoKit exposes no API to bypass that, so the app must never claim
+    /// otherwise — the deletion review screen says so explicitly.
     private func finishDeletion(
         success: Bool,
         error: (any Error)?,
-        count: Int,
-        permanentDelete: Bool,
-        assetIDs: [String],
+        submittedIDs: Set<String>,
         completion: @escaping (Result<Int, Error>) -> Void
     ) {
-        if success && permanentDelete {
-            permanentlyDelete(assetIDs: assetIDs) { [weak self] _ in
-                Task { @MainActor in
-                    self?.trashQueue.removeAll()
-                    // Report success regardless — the initial delete succeeded.
-                    completion(.success(count))
-                }
-            }
-        } else if success {
-            trashQueue.removeAll()
-            completion(.success(count))
+        if success {
+            // Clear only what was actually submitted. `removeAll()` also discarded
+            // anything queued while the change request was in flight, so those
+            // photos vanished from the queue without ever being deleted.
+            let before = trashQueue.count
+            trashQueue.removeAll { submittedIDs.contains($0.id) }
+            completion(.success(before - trashQueue.count))
         } else {
             let deleteError = error ?? NSError(
                 domain: "SwipeClean.DeleteManager",
@@ -159,30 +127,6 @@ final class DeleteManager: ObservableObject {
             )
             completion(.failure(deleteError))
         }
-    }
-
-    /// Permanently deletes assets that are already in Recently Deleted.
-    /// The completion handler may be invoked on a background queue.
-    private func permanentlyDelete(assetIDs: [String], completion: @escaping @Sendable (Bool) -> Void) {
-        guard !assetIDs.isEmpty else {
-            completion(true)
-            return
-        }
-        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: nil)
-        guard fetchResult.count > 0 else {
-            completion(true)
-            return
-        }
-        var collected: [PHAsset] = []
-        fetchResult.enumerateObjects { asset, _, _ in
-            collected.append(asset)
-        }
-        let assetsToDelete = collected
-        photoLibrary.performChanges({
-            PHAssetChangeRequest.deleteAssets(assetsToDelete as NSFastEnumeration)
-        }, completionHandler: { success, _ in
-            completion(success)
-        })
     }
 
     /// Async wrapper for executeQueuedDeletions.

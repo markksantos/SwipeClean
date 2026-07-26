@@ -146,18 +146,18 @@ final class SupercutComposer: ObservableObject {
 
     // MARK: - Render Size Detection
 
+    /// Picks the output orientation from the first item's asset metadata.
+    ///
+    /// Reads `pixelWidth`/`pixelHeight` off the `PHAsset` rather than measuring a
+    /// cached `UIImage`: the cache is usually empty here (supercut photos come
+    /// from their own fetch, not from the swipe deck) which silently defaulted
+    /// every montage to portrait, and metadata needs no decode at all.
     private func detectRenderSize(from photo: PhotoItem?) -> CGSize {
-        guard let image = photo?.fullImage ?? photo?.thumbnail else {
-            return CGSize(width: 1080, height: 1920) // default portrait
-        }
-        let aspect = image.size.width / image.size.height
-        if aspect >= 1.0 {
-            // Landscape
-            return CGSize(width: 1920, height: 1080)
-        } else {
-            // Portrait
-            return CGSize(width: 1080, height: 1920)
-        }
+        let portrait = CGSize(width: 1080, height: 1920)
+        let landscape = CGSize(width: 1920, height: 1080)
+
+        guard let asset = photo?.asset, asset.pixelHeight > 0 else { return portrait }
+        return asset.pixelWidth >= asset.pixelHeight ? landscape : portrait
     }
 
     // MARK: - Duration Calculation
@@ -317,8 +317,11 @@ final class SupercutComposer: ObservableObject {
                     fps: fps
                 )
             } else {
-                // Write still image as video frames.
-                guard let image = photo.fullImage ?? photo.thumbnail else { continue }
+                // Write still image as video frames. The image has to be
+                // requested at render size — the cached copies are a 600px
+                // thumbnail at best and usually absent entirely, which dropped
+                // most stills from the montage and upscaled the rest.
+                guard let image = await loadRenderImage(for: photo, size: renderSize) else { continue }
                 guard let pixelBuffer = createPixelBuffer(from: image, size: renderSize) else { continue }
 
                 for _ in 0..<framesForClip {
@@ -345,6 +348,37 @@ final class SupercutComposer: ObservableObject {
         }
 
         return outputURL
+    }
+
+    // MARK: - Still Image Loading
+
+    /// Requests one still at render resolution, falling back to any image already
+    /// cached on the item if PhotoKit cannot produce one (e.g. an iCloud asset
+    /// with no local copy and no network).
+    private func loadRenderImage(for photo: PhotoItem, size: CGSize) async -> UIImage? {
+        guard let asset = photo.asset else { return photo.fullImage ?? photo.thumbnail }
+
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .exact
+        options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
+
+        let image: UIImage? = await withCheckedContinuation { continuation in
+            // `.highQualityFormat` guarantees exactly one callback, so resuming
+            // the continuation here cannot double-resume the way
+            // `.opportunistic` would.
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: size,
+                contentMode: .aspectFill,
+                options: options
+            ) { result, _ in
+                continuation.resume(returning: result)
+            }
+        }
+
+        return image ?? photo.fullImage ?? photo.thumbnail
     }
 
     // MARK: - Video Frame Extraction
