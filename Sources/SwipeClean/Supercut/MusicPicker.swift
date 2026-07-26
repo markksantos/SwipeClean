@@ -31,45 +31,62 @@ enum MusicSource: String, CaseIterable, Identifiable {
 
 // MARK: - MusicPickerModel
 
+@MainActor
 final class MusicPickerModel: ObservableObject {
     @Published var selectedSource: MusicSource = .none
     @Published var selectedTrackURL: URL?
     @Published var selectedTrackName: String?
+    /// Set when a pick could not be used, so the sheet can explain why instead of
+    /// appearing to ignore the tap.
+    @Published var pickerMessage: String?
 
-    private var audioPlayer: AVAudioPlayer?
+    /// Security-scoped URL currently being held open, so access is balanced.
+    private var scopedURL: URL?
 
-    // MARK: - Preview Playback
-
-    func previewTrack(url: URL) {
-        stopPreview()
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.play()
-        } catch {
-            print("Preview error: \(error)")
-        }
-    }
-
-    func stopPreview() {
-        audioPlayer?.stop()
-        audioPlayer = nil
+    deinit {
+        scopedURL?.stopAccessingSecurityScopedResource()
     }
 
     // MARK: - Apple Music
 
     /// The Apple Music picker is presented via UIViewControllerRepresentable;
-    /// the delegate callback sets selectedTrackURL.
+    /// the delegate callback lands here.
     func handleAppleMusicSelection(_ mediaItem: MPMediaItem) {
-        selectedTrackURL = mediaItem.assetURL
+        // Apple Music tracks that are streamed or DRM-protected have no
+        // `assetURL`, and AVFoundation cannot read them. Assigning nil left the
+        // sheet with no selection and no Done button, so picking such a song
+        // looked like the app had simply ignored it.
+        guard let url = mediaItem.assetURL else {
+            pickerMessage = """
+                That song is protected by Apple Music and can't be added to a video. \
+                Pick a song you own, or choose an audio file from Files.
+                """
+            return
+        }
+
+        releaseScopedURL()
+        pickerMessage = nil
+        selectedTrackURL = url
         selectedTrackName = mediaItem.title ?? "Apple Music Track"
         selectedSource = .appleMusic
     }
 
     // MARK: - Files
 
-    /// The document picker is presented via UIViewControllerRepresentable;
-    /// the delegate callback sets selectedTrackURL.
+    /// Takes ownership of a security-scoped URL from the document picker.
     func handleFileSelection(_ url: URL) {
+        releaseScopedURL()
+
+        // A file picked outside the app's container stays readable only while
+        // access is held open, and the previous code opened it without ever
+        // closing it — leaking one scope per pick.
+        guard url.startAccessingSecurityScopedResource() else {
+            pickerMessage = "That file couldn't be opened. Try copying it into Files first."
+            return
+        }
+
+        scopedURL = url
+        pickerMessage = nil
         selectedTrackURL = url
         selectedTrackName = url.lastPathComponent
         selectedSource = .files
@@ -78,10 +95,16 @@ final class MusicPickerModel: ObservableObject {
     // MARK: - Clear
 
     func clearSelection() {
-        stopPreview()
+        releaseScopedURL()
+        pickerMessage = nil
         selectedSource = .none
         selectedTrackURL = nil
         selectedTrackName = nil
+    }
+
+    private func releaseScopedURL() {
+        scopedURL?.stopAccessingSecurityScopedResource()
+        scopedURL = nil
     }
 }
 
@@ -108,6 +131,16 @@ struct MusicPickerView: View {
                 .padding()
 
                 Divider()
+
+                if let message = model.pickerMessage {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                }
 
                 // Content based on selected source
                 Group {
@@ -216,8 +249,11 @@ struct MusicPickerView: View {
                 .font(.body.weight(.medium))
                 .lineLimit(1)
             Spacer()
-            Button("Change") {
-                // User can re-pick within the current source
+            // Was a "Change" button with an empty action — interactive-looking and
+            // inert. Re-picking is what the button below the row already does, so
+            // this slot clears the selection instead.
+            Button("Remove", role: .destructive) {
+                model.clearSelection()
             }
             .font(.caption)
         }
@@ -254,7 +290,7 @@ struct AppleMusicPickerRepresentable: UIViewControllerRepresentable {
 
         func mediaPicker(_ mediaPicker: MPMediaPickerController, didPickMediaItems mediaItemCollection: MPMediaItemCollection) {
             if let item = mediaItemCollection.items.first {
-                model.handleAppleMusicSelection(item)
+                MainActor.assumeIsolated { model.handleAppleMusicSelection(item) }
             }
             mediaPicker.dismiss(animated: true)
         }
@@ -288,10 +324,10 @@ struct AudioDocumentPickerRepresentable: UIViewControllerRepresentable {
         init(model: MusicPickerModel) { self.model = model }
 
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            // The model opens and closes the security scope itself so the two
+            // halves stay in one place.
             if let url = urls.first {
-                // Start accessing security-scoped resource
-                guard url.startAccessingSecurityScopedResource() else { return }
-                model.handleFileSelection(url)
+                MainActor.assumeIsolated { model.handleFileSelection(url) }
             }
         }
 

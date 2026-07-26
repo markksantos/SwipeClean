@@ -16,7 +16,9 @@ struct SwipeView: View {
     @State private var showDoneConfirmation = false
     @State private var showCancelAlert = false
     @State private var showShareSheet = false
-    @State private var shareImage: UIImage?
+    /// The original file (or a decoded image, when there is no original to hand).
+    @State private var shareItem: Any?
+    @State private var isPreparingShare = false
     @State private var swipeThreshold: CGFloat = 120
     @StateObject private var swipeHistory = SwipeHistory()
     @State private var showHistoryPanel = false
@@ -297,20 +299,29 @@ struct SwipeView: View {
 
                 // Share button (only visible when there's a current photo)
                 Button {
-                    if let photo = photoLoader.currentPhoto {
-                        shareImage = photo.fullImage ?? photo.thumbnail
-                        showShareSheet = true
+                    guard let photo = photoLoader.currentPhoto else { return }
+                    isPreparingShare = true
+                    Task {
+                        shareItem = await ShareItemLoader.item(for: photo)
+                        isPreparingShare = false
+                        showShareSheet = shareItem != nil
                     }
                 } label: {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 36, height: 36)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
+                    Group {
+                        if isPreparingShare {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .foregroundColor(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(Color(.systemGray5))
+                    .clipShape(Circle())
                 }
                 .opacity(photoLoader.currentPhoto != nil ? 1 : 0)
-                .disabled(photoLoader.currentPhoto == nil)
+                .disabled(photoLoader.currentPhoto == nil || isPreparingShare)
             }
 
             // Keep button
@@ -329,8 +340,8 @@ struct SwipeView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let image = shareImage {
-                ShareSheet(activityItems: [image])
+            if let shareItem {
+                ShareSheet(activityItems: [shareItem])
             }
         }
     }

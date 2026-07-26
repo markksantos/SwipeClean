@@ -1,0 +1,51 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : "https://nosleeplab.com/swipeclean/privacy"
+      }
+    ]
+  },
+  "identifier" : "SWIPECLEAN_STOREKIT",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : true,
+      "internalID" : "5C5C5C5C",
+      "localizations" : [
+        {
+          "description" : "Unlock Smart Cleanup, Similar Photos, Auto Clean Rules, and Supercut. One-time purchase — swiping is always free.",
+          "displayName" : "SwipeClean Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.nosleeplab.swipeclean.pro.lifetime",
+      "referenceName" : "SwipeClean Pro (Lifetime)",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0000000000",
+    "_developerTeamID" : "0000000000",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

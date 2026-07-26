@@ -370,3 +370,71 @@ final class PhotoLoaderMemoryTests: XCTestCase {
         )
     }
 }
+
+// MARK: - Pro gating
+
+@MainActor
+final class ProGatingTests: XCTestCase {
+
+    /// A throwaway suite so seeding the entitlement flag cannot touch the
+    /// simulator's real defaults or leak between tests.
+    private func defaults(unlocked: Bool) -> UserDefaults {
+        let suite = "swipeclean.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(unlocked, forKey: "sc_pro_unlocked")
+        return defaults
+    }
+
+    func test_every_pro_feature_is_locked_without_a_purchase() {
+        let pro = ProManager(defaults: defaults(unlocked: false))
+
+        XCTAssertFalse(pro.isPro)
+        for feature in ProFeature.allCases {
+            XCTAssertTrue(pro.isLocked(feature), "\(feature.title) must be gated")
+        }
+    }
+
+    func test_a_cached_entitlement_unlocks_before_the_store_answers() {
+        // Without this the gated rows flash locked on every cold launch.
+        let pro = ProManager(defaults: defaults(unlocked: true))
+
+        XCTAssertTrue(pro.isPro)
+        for feature in ProFeature.allCases {
+            XCTAssertFalse(pro.isLocked(feature))
+        }
+    }
+
+    /// Swiping is the product. Metering it would earn one-star reviews for the
+    /// exact thing the listing promises, so no plain album may ever be gated.
+    func test_plain_albums_are_never_gated() {
+        let pro = ProManager(defaults: defaults(unlocked: false))
+        let free: [AlbumSource] = [
+            .allPhotos, .recents, .screenshots, .videos, .selfies,
+            .livePhotos, .favorites, .onThisDay, .random, .duplicates,
+            .month(2026, 3),
+        ]
+
+        for source in free {
+            XCTAssertNil(pro.feature(for: source), "\(source.displayName) must stay free")
+            XCTAssertFalse(pro.isLocked(source))
+        }
+    }
+
+    func test_automation_sources_map_to_their_features() {
+        let pro = ProManager(defaults: defaults(unlocked: false))
+
+        XCTAssertEqual(pro.feature(for: .smartCleanup), .smartCleanup)
+        XCTAssertEqual(pro.feature(for: .similarPhotos), .similarPhotos)
+        XCTAssertEqual(pro.feature(for: .autoClean), .autoClean)
+    }
+
+    func test_every_feature_has_a_title_icon_and_pitch() {
+        // The paywall renders all four unconditionally; an empty string there is a
+        // visible blank row rather than a crash, so assert on content.
+        for feature in ProFeature.allCases {
+            XCTAssertFalse(feature.title.isEmpty)
+            XCTAssertFalse(feature.icon.isEmpty)
+            XCTAssertGreaterThan(feature.pitch.count, 30, "\(feature.title) needs a real pitch")
+        }
+    }
+}

@@ -8,6 +8,10 @@ struct SwipeCleanApp: App {
     @StateObject private var deleteManager = DeleteManager()
     @StateObject private var streakManager = StreakManager()
     @StateObject private var milestoneTracker = MilestoneTracker()
+    // A singleton rather than a fresh instance: StoreKit's `Transaction.updates`
+    // stream must be observed by exactly one listener for the life of the process,
+    // or an externally-approved purchase can be finished twice.
+    @StateObject private var proManager = ProManager.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     var body: some Scene {
@@ -27,6 +31,7 @@ struct SwipeCleanApp: App {
                 .environmentObject(deleteManager)
                 .environmentObject(streakManager)
                 .environmentObject(milestoneTracker)
+                .environmentObject(proManager)
             }
         }
     }

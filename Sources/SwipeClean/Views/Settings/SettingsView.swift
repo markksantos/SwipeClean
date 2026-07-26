@@ -7,6 +7,9 @@ struct SettingsView: View {
     @EnvironmentObject private var deleteManager: DeleteManager
     @EnvironmentObject private var streakManager: StreakManager
     @EnvironmentObject private var milestoneTracker: MilestoneTracker
+    @EnvironmentObject private var proManager: ProManager
+
+    @State private var showPaywall = false
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(SettingsKeys.sortOrder) private var sortOrder: String = PhotoSortOrder.newestFirst.rawValue
@@ -39,6 +42,44 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // MARK: - Pro
+                Section {
+                    if proManager.isPro {
+                        LabeledContent {
+                            Text("Unlocked")
+                                .foregroundStyle(.secondary)
+                        } label: {
+                            Label("SwipeClean Pro", systemImage: "checkmark.seal.fill")
+                        }
+                    } else {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Label("Unlock SwipeClean Pro", systemImage: "sparkles")
+                                Spacer()
+                                Text(proManager.displayPrice)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Apple requires a restore path that is reachable without
+                        // making a purchase first.
+                        Button("Restore Purchase") {
+                            Task { await proManager.restore() }
+                        }
+                        .disabled(proManager.isWorking)
+                    }
+                } header: {
+                    Text("Pro")
+                } footer: {
+                    if proManager.isPro {
+                        Text("Smart Cleanup, Similar Photos, Auto Clean Rules, and Supercut are unlocked on every device signed in to your Apple Account.")
+                    } else {
+                        Text("Swiping and batch deletion are always free. Pro adds Smart Cleanup, Similar Photos, Auto Clean Rules, and Supercut for a one-time purchase.")
+                    }
+                }
+
                 // MARK: - Sorting
                 Section {
                     Picker("Sort photos by", selection: $sortOrder) {
@@ -175,20 +216,23 @@ struct SettingsView: View {
                         Label("Rate SwipeClean", systemImage: "star")
                     }
 
-                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/privacy")!) {
+                    Link(destination: SwipeCleanLinks.privacy) {
                         Label("Privacy Policy", systemImage: "hand.raised")
                     }
 
-                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/terms")!) {
+                    Link(destination: SwipeCleanLinks.terms) {
                         Label("Terms of Use", systemImage: "doc.text")
                     }
 
-                    Link(destination: URL(string: "https://nosleeplab.com/swipeclean/support")!) {
+                    Link(destination: SwipeCleanLinks.support) {
                         Label("Support", systemImage: "questionmark.circle")
                     }
                 } header: {
                     Text("About")
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(pro: proManager)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

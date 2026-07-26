@@ -33,8 +33,6 @@ Packages/
 .env.production
 .env.development
 
-# Secrets (xcconfig holding API keys) — keep the example, ignore the real one
-Secrets.xcconfig
 
 # Test/build output
 /tmp/

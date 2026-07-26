@@ -3,9 +3,16 @@
 <plist version="1.0">
 <dict>
 	<!--
-	  SwipeClean collects nothing and tracks nobody. The app makes zero network
-	  requests: every photo, quality score, statistic and generated video stays
-	  on device. There are no third-party SDKs.
+	  SwipeClean collects nothing and tracks nobody. There are no third-party
+	  SDKs, no analytics, no accounts, and no server of ours for anything to be
+	  sent to: every photo, quality score, statistic and generated video stays on
+	  device.
+
+	  The app is not fully offline, and must not claim to be. Image requests set
+	  `isNetworkAccessAllowed = true`, so PhotoKit will pull a full-resolution
+	  original down from the user's own iCloud Photo Library when only an
+	  optimised copy is on device. That traffic is between the user and Apple, on
+	  the user's behalf, and carries nothing of ours.
 
 	  UserDefaults is the only "required reason" API the app touches. Photo dates
 	  come from PHAsset.creationDate (PhotoKit metadata), which is not the

@@ -58,6 +58,9 @@ schemes:
         SwipeCleanTests: [test]
     run:
       config: Debug
+      # Drives the Pro purchase flow locally, so the paywall can be exercised on
+      # the simulator without an App Store Connect product.
+      storeKitConfiguration: SwipeClean.storekit
     test:
       config: Debug
       gatherCoverageData: true

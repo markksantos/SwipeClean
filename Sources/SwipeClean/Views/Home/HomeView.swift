@@ -8,7 +8,10 @@ struct HomeView: View {
     @EnvironmentObject private var deleteManager: DeleteManager
     @EnvironmentObject private var streakManager: StreakManager
     @EnvironmentObject private var milestoneTracker: MilestoneTracker
+    @EnvironmentObject private var proManager: ProManager
 
+    /// Non-nil while the paywall is up; carries the feature that triggered it.
+    @State private var paywallFeature: ProFeature?
     @State private var showSettings = false
     @State private var showAchievements = false
     @State private var navigationPath = NavigationPath()
@@ -167,104 +170,13 @@ struct HomeView: View {
                         .font(.title3.weight(.semibold))
                         .padding(.top, 4)
 
-                    // Smart Albums
-                    if !grouped.smart.isEmpty {
-                        sectionHeader("Smart Albums")
-                        LazyVStack(spacing: 10) {
-                            ForEach(Array(grouped.smart.enumerated()), id: \.element.source) { index, info in
-                                AlbumCard(
-                                    source: info.source,
-                                    photoCount: info.count
-                                ) {
-                                    navigationPath.append(info)
-                                }
-                                .contextMenu {
-                                    Button {
-                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
-                                    } label: {
-                                        Label("Bulk Select", systemImage: "checkmark.circle")
-                                    }
-                                    Button {
-                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
-                                    } label: {
-                                        Label("Create Supercut", systemImage: "film")
-                                    }
-                                }
-                                .opacity(cardsVisible ? 1 : 0)
-                                .offset(y: cardsVisible ? 0 : 20)
-                                .animation(
-                                    .easeOut(duration: 0.4).delay(Double(index) * 0.06),
-                                    value: cardsVisible
-                                )
-                            }
-                        }
-                    }
-
-                    // By Month
-                    if !grouped.months.isEmpty {
-                        sectionHeader("By Month")
-                        LazyVStack(spacing: 10) {
-                            ForEach(Array(grouped.months.enumerated()), id: \.element.source) { index, info in
-                                AlbumCard(
-                                    source: info.source,
-                                    photoCount: info.count
-                                ) {
-                                    navigationPath.append(info)
-                                }
-                                .contextMenu {
-                                    Button {
-                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
-                                    } label: {
-                                        Label("Bulk Select", systemImage: "checkmark.circle")
-                                    }
-                                    Button {
-                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
-                                    } label: {
-                                        Label("Create Supercut", systemImage: "film")
-                                    }
-                                }
-                                .opacity(cardsVisible ? 1 : 0)
-                                .offset(y: cardsVisible ? 0 : 20)
-                                .animation(
-                                    .easeOut(duration: 0.4).delay(Double(grouped.smart.count + index) * 0.06),
-                                    value: cardsVisible
-                                )
-                            }
-                        }
-                    }
-
-                    // User Albums
-                    if !grouped.user.isEmpty {
-                        sectionHeader("Your Albums")
-                        LazyVStack(spacing: 10) {
-                            ForEach(Array(grouped.user.enumerated()), id: \.element.source) { index, info in
-                                AlbumCard(
-                                    source: info.source,
-                                    photoCount: info.count
-                                ) {
-                                    navigationPath.append(info)
-                                }
-                                .contextMenu {
-                                    Button {
-                                        bulkSelectTarget = BulkSelectNavItem(albumSource: info.source, albumName: info.source.displayName)
-                                    } label: {
-                                        Label("Bulk Select", systemImage: "checkmark.circle")
-                                    }
-                                    Button {
-                                        supercutTarget = SupercutNavItem(albumSource: info.source, photoCount: info.count)
-                                    } label: {
-                                        Label("Create Supercut", systemImage: "film")
-                                    }
-                                }
-                                .opacity(cardsVisible ? 1 : 0)
-                                .offset(y: cardsVisible ? 0 : 20)
-                                .animation(
-                                    .easeOut(duration: 0.4).delay(Double(grouped.smart.count + index) * 0.06),
-                                    value: cardsVisible
-                                )
-                            }
-                        }
-                    }
+                    albumSection("Smart Albums", grouped.smart, startingAt: 0)
+                    albumSection("By Month", grouped.months, startingAt: grouped.smart.count)
+                    albumSection(
+                        "Your Albums",
+                        grouped.user,
+                        startingAt: grouped.smart.count + grouped.months.count
+                    )
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 32)
@@ -289,6 +201,9 @@ struct HomeView: View {
                     .environmentObject(deleteManager)
                     .environmentObject(streakManager)
                     .environmentObject(milestoneTracker)
+            }
+            .sheet(item: $paywallFeature) { feature in
+                PaywallView(pro: proManager, highlighted: feature)
             }
             .sheet(isPresented: $showAchievements) {
                 AchievementsView()
@@ -353,6 +268,76 @@ struct HomeView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
+    }
+
+    /// One album section. The three sections were byte-for-byte copies of each
+    /// other apart from their stagger offset, which is how the Pro gate would have
+    /// had to be written three times.
+    ///
+    /// - Parameter startingAt: how many cards precede this section, so the reveal
+    ///   stagger continues across sections instead of restarting.
+    @ViewBuilder
+    private func albumSection(
+        _ title: String,
+        _ sources: [AlbumSourceInfo],
+        startingAt offset: Int
+    ) -> some View {
+        if !sources.isEmpty {
+            sectionHeader(title)
+            LazyVStack(spacing: 10) {
+                ForEach(Array(sources.enumerated()), id: \.element.source) { index, info in
+                    albumCard(info, staggerIndex: offset + index)
+                }
+            }
+        }
+    }
+
+    private func albumCard(_ info: AlbumSourceInfo, staggerIndex: Int) -> some View {
+        let lockedFeature = proManager.isPro ? nil : proManager.feature(for: info.source)
+
+        return AlbumCard(
+            source: info.source,
+            photoCount: info.count,
+            isLocked: lockedFeature != nil
+        ) {
+            if let lockedFeature {
+                paywallFeature = lockedFeature
+            } else {
+                navigationPath.append(info)
+            }
+        }
+        .contextMenu {
+            Button {
+                bulkSelectTarget = BulkSelectNavItem(
+                    albumSource: info.source,
+                    albumName: info.source.displayName
+                )
+            } label: {
+                Label("Bulk Select", systemImage: "checkmark.circle")
+            }
+
+            Button {
+                if proManager.isLocked(.supercut) {
+                    paywallFeature = .supercut
+                } else {
+                    supercutTarget = SupercutNavItem(
+                        albumSource: info.source,
+                        photoCount: info.count
+                    )
+                }
+            } label: {
+                Label(
+                    proManager.isLocked(.supercut) ? "Create Supercut (Pro)" : "Create Supercut",
+                    systemImage: proManager.isLocked(.supercut) ? "lock.fill" : "film"
+                )
+            }
+        }
+        .opacity(cardsVisible ? 1 : 0)
+        .offset(y: cardsVisible ? 0 : 20)
+        .animation(
+            .easeOut(duration: 0.4).delay(Double(staggerIndex) * 0.06),
+            value: cardsVisible
+        )
     }
 }
 

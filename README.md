@@ -38,7 +38,7 @@
 
 ### Supercut
 - **Supercut generator** — create montage videos from any time period with music and AI-scored photo selection
-- **Music integration** — Apple Music, local files, or free tracks from Pixabay
+- **Music integration** — pick a song from your Apple Music library or an audio file from Files
 - **Beat matching** — transitions sync to the beat of your selected music
 
 ### Quality of Life
@@ -147,7 +147,7 @@ Sources/SwipeClean/
 │   │   └── SettingsView.swift           # App settings
 │   └── ShareSheet.swift                 # UIActivityViewController wrapper
 └── Supercut/
-    ├── MusicPicker.swift                # Music selection (Apple Music / Files / Pixabay)
+    ├── MusicPicker.swift                # Music selection (Apple Music / Files)
     ├── PhotoAnalyzer.swift              # Vision-based quality scoring
     ├── SupercutComposer.swift           # AVFoundation video montage generation
     ├── SupercutPreviewView.swift        # Preview / save / share the result
@@ -157,18 +157,8 @@ Sources/SwipeClean/
 
 ## Configuration
 
-The only optional external dependency is the **Pixabay** free-music library used
-by the Supercut "Free Library" tab. It is wired through a gitignored xcconfig so
-no key ever lands in source control:
-
-```bash
-cp Secrets.example.xcconfig Secrets.xcconfig
-# then set PIXABAY_API_KEY=<your key> in Secrets.xcconfig
-```
-
-Get a free key at <https://pixabay.com/api/docs/>. If no key is configured, the
-Free Library tab degrades gracefully and users can still pick music from Apple
-Music or the Files app — the rest of the app is fully functional without it.
+None. There is nothing to configure and no key to supply — SwipeClean has no
+third-party services, no accounts, and no build-time secrets.
 
 ## License
 

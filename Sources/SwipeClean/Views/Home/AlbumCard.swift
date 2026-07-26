@@ -4,6 +4,9 @@ import Photos
 struct AlbumCard: View {
     let source: AlbumSource
     let photoCount: Int
+    /// Draws a lock instead of the chevron. The card still taps through — it opens
+    /// the paywall rather than the feature, so the row never looks broken.
+    var isLocked: Bool = false
     let onTap: () -> Void
 
     @State private var thumbnail: UIImage?
@@ -87,7 +90,12 @@ struct AlbumCard: View {
                     }
                 }
 
-                if !isEmpty {
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Requires SwipeClean Pro")
+                } else if !isEmpty {
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
@@ -98,7 +106,9 @@ struct AlbumCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(PressDownButtonStyle())
-        .disabled(isEmpty)
+        // A locked row must stay tappable even with nothing to show yet, because
+        // its tap opens the paywall rather than the album.
+        .disabled(isEmpty && !isLocked)
         .task {
             guard !isEmpty else { return }
             thumbnail = await loadThumbnail(for: source)
