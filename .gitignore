@@ -37,3 +37,8 @@ Packages/
 # Test/build output
 /tmp/
 *.xcresult
+
+# Marketing: raw captures and renders are regenerable, framed store assets are not
+marketing/shots/
+marketing/clips/
+marketing/out/

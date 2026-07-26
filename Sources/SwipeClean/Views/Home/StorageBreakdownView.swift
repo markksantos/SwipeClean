@@ -185,6 +185,11 @@ struct StorageBreakdownView: View {
 
     private var ringChart: some View {
         ZStack {
+            // Track behind the segments, so a partially-measured library reads as
+            // a ring with a gap rather than a broken arc.
+            Circle()
+                .stroke(Color(.tertiarySystemFill), style: StrokeStyle(lineWidth: 22, lineCap: .butt))
+
             ForEach(Array(viewModel.categories.enumerated()), id: \.element.id) { index, category in
                 let startAngle = startAngle(for: index)
                 let endAngle = endAngle(for: index)
@@ -192,6 +197,17 @@ struct StorageBreakdownView: View {
                     .trim(from: startAngle, to: endAngle)
                     .stroke(category.color, style: StrokeStyle(lineWidth: 22, lineCap: .butt))
                     .rotationEffect(.degrees(-90))
+            }
+
+            // The hole was empty, which read as a loading spinner rather than a
+            // chart. The item count is the one number the segments do not carry.
+            VStack(spacing: 2) {
+                Text("\(viewModel.categories.reduce(0) { $0 + $1.count })")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                Text("items")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(height: 180)
