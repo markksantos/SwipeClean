@@ -36,6 +36,12 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UIRequiresFullScreen: true
+        # iPhone only. `settings.base` above sets this at project level, but
+        # XcodeGen writes its own "1,2" at target level, which wins — so the
+        # built app declared iPad support and would have been asked for iPad
+        # screenshots for a layout that has never been opened on one.
+        # (ITSAppUsesNonExemptEncryption is already declared in Info.plist.)
+        TARGETED_DEVICE_FAMILY: "1"
     dependencies: []
 
   SwipeCleanTests:
