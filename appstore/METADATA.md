@@ -8,7 +8,7 @@ they are already inside their character limits.
 | Field | Value |
 |---|---|
 | Name (30 max) | `SwipeClean: Photo Cleaner` (25) |
-| Subtitle (30 max) | `Swipe to clear your camera roll` (30) |
+| Subtitle (30 max) | `Swipe to clear the camera roll` (30) |
 | Bundle ID | `com.nosleeplab.SwipeClean` |
 | SKU | `SWIPECLEAN-IOS-001` |
 | Primary category | Utilities |
@@ -78,6 +78,7 @@ photo,cleaner,storage,duplicate,delete,swipe,camera roll,gallery,space,cleanup,d
 |---|---|
 | Support URL | https://nosleeplab.com/swipeclean/support |
 | Marketing URL | https://nosleeplab.com/apps/swipeclean |
+| Copyright | 2026 Mark Studios LLC |
 | Privacy Policy URL | https://nosleeplab.com/swipeclean/privacy |
 
 Terms of Use (EULA) is Apple's standard EULA; the in-app paywall additionally
