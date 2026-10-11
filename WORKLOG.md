@@ -143,3 +143,18 @@ group.
   the exact product id above.
 - Deploy the nosleeplab pages so the three URLs resolve before submitting; App
   Review checks them.
+
+## 2026-10-11 — Xcode 27 launch-prep pass
+
+Verified on Xcode 27.0 GM (27A266a), iOS 27.0 simulator (iPhone 17 Pro Max):
+140 tests pass, Release device build compiles unsigned, the app launches with no
+crash (SwiftUI scene manifest present in the built Info.plist), and
+`PhotoPermissionUITests` passes: the iOS 27 prompt's "Allow Full Access" leads
+to the home screen. Home, swipe, storage, paywall and settings checked in light
+and dark appearance. Product ID matches `SwipeClean.storekit`; Restore is on the
+paywall and in Settings. Privacy manifest (UserDefaults `CA92.1` only) matches a
+scan of the sources. No code change was needed; screenshots stay as they are.
+
+Landmine: run `PhotoPermissionUITests` on its own (`-only-testing:`). Run after
+`DemoFootageUITests`, it inherits that test's unanswered prompt, the app comes
+up as `.denied`, and the test fails for a reason that is not the app's.
